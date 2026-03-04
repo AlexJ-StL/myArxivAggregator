@@ -22,7 +22,7 @@ MAX_ARTICLES = 8
 
 def load_seen_ids():
     try:
-        with open(SEEN_IDS_FILE, "r", encoding="utf-8") as f:
+        with open(SEEN_IDS_FILE, encoding="utf-8") as f:
             return set(json.load(f))
     except FileNotFoundError:
         return set()
@@ -122,7 +122,7 @@ def download_unsplash_photo(photo_data, filename, is_featured=False):
         log(f"Downloaded and saved image: {filename}")
         return True
 
-    except (OSError, IOError, requests.RequestException) as e:
+    except (OSError, requests.RequestException) as e:
         log(f"Error downloading image: {e}")
         return False
 

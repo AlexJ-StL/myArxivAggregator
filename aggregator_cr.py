@@ -7,12 +7,24 @@ from datetime import datetime
 
 import feedparser
 import requests
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 
-from config import (ARXIV_CR_URL, FTP_HOST, FTP_PASS, FTP_REMOTE_DIR, FTP_USER,
-                    SEEN_IDS_FILE, UNSPLASH_ACCESS_KEY, UNSPLASH_API_URL)
-from content_utils import (generate_search_keywords, log, rewrite_blurb,
-                           rewrite_title)
+from config import (
+    ARXIV_CR_URL,
+    FTP_HOST,
+    FTP_PASS,
+    FTP_REMOTE_DIR,
+    FTP_USER,
+    SEEN_IDS_FILE,
+    UNSPLASH_ACCESS_KEY,
+    UNSPLASH_API_URL,
+)
+from content_utils import (
+    generate_search_keywords,
+    log,
+    rewrite_blurb,
+    rewrite_title,
+)
 from featured_tracker import select_featured_article
 from generate_html import generate_html
 
@@ -58,27 +70,41 @@ def search_unsplash_photo(query, is_featured=False):
 
     # Search for photos
     search_url = f"{UNSPLASH_API_URL}/search/photos"
-    params = {"query": query, "per_page": 1, "orientation": "landscape" if is_featured else "squarish"}
+    orientation = "landscape" if is_featured else "squarish"
+    params = {"query": query, "per_page": 1, "orientation": orientation}
 
     try:
-        response = requests.get(search_url, headers=headers, params=params, timeout=10)
+        response = requests.get(
+            search_url, headers=headers, params=params, timeout=10
+        )
         response.raise_for_status()
         data = response.json()
 
         if data["results"]:
             photo = data["results"][0]
 
-            # Add UTM parameters to user profile link as required by Unsplash guidelines
-            user_link_with_utm = f"{photo['user']['links']['html']}?utm_source=arxiv_aggregator&utm_medium=referral"
+            # Add UTM parameters to user profile link as required by Unsplash
+            # guidelines
+            user_link_with_utm = (
+                f"{photo['user']['links']['html']}"
+                "?utm_source=arxiv_aggregator&utm_medium=referral"
+            )
 
             return {
                 "id": photo["id"],
-                "url": photo["urls"]["small"] if not is_featured else photo["urls"]["regular"],
+                "url": (
+                    photo["urls"]["small"]
+                    if not is_featured
+                    else photo["urls"]["regular"]
+                ),
                 "download_url": photo["links"]["download_location"],
                 "alt_description": photo.get("alt_description", ""),
                 "user": photo["user"]["name"],
                 "user_link": user_link_with_utm,
-                "unsplash_link": f"https://unsplash.com/?utm_source=arxiv_aggregator&utm_medium=referral",
+                "unsplash_link": (
+                    "https://unsplash.com/"
+                    "?utm_source=arxiv_aggregator&utm_medium=referral"
+                ),
             }
     except requests.RequestException as e:
         log(f"Error searching Unsplash: {e}")
@@ -92,9 +118,11 @@ def download_unsplash_photo(photo_data, filename, is_featured=False):
         # REQUIRED: Trigger download endpoint as per Unsplash API guidelines
         # This is mandatory when using images in a way similar to downloading
         headers = {"Authorization": f"Client-ID {UNSPLASH_ACCESS_KEY}"}
-        download_response = requests.get(photo_data["download_url"], headers=headers, timeout=10)
+        download_response = requests.get(
+            photo_data["download_url"], headers=headers, timeout=10
+        )
         download_response.raise_for_status()
-        log(f"Triggered Unsplash download endpoint for photo {photo_data['id']}")
+        log(f"Triggered Unsplash download for photo {photo_data['id']}")
 
         # Download the actual image using the hotlinked URL as required
         response = requests.get(photo_data["url"], timeout=10)
@@ -149,7 +177,7 @@ def generate_article_image(title, summary, is_featured=False):
         return {
             "filename": filename,
             "path": f"images/{filename}",
-            "alt_text": photo_data.get("alt_description", f"Photo related to: {title}"),
+            "alt_text": photo_data.get("alt_description", f"Photo: {title}"),
             "credit": f"Photo by {photo_data['user']} on Unsplash",
             "credit_link": photo_data["user_link"],
             "unsplash_link": photo_data["unsplash_link"],
@@ -164,11 +192,11 @@ def upload_via_ftp(local_dir, remote_filename):
     host = FTP_HOST if FTP_HOST is not None else ""
     user = FTP_USER if FTP_USER is not None else ""
     password = FTP_PASS if FTP_PASS is not None else ""
-    
+
     if not host or not user or not password:
         log("Error: FTP credentials are missing. Cannot upload.")
         return
-    
+
     with ftplib.FTP(host, user, password) as ftp:
         ftp.encoding = "utf-8"
         ftp.cwd(FTP_REMOTE_DIR)
@@ -219,7 +247,9 @@ def main():
         return
 
     # Select featured article (avoiding already-featured ones)
-    featured_article, remaining_articles = select_featured_article(articles_to_process)
+    featured_article, remaining_articles = select_featured_article(
+        articles_to_process
+    )
 
     if not featured_article:
         log("No suitable featured article found. Exiting.")
@@ -228,9 +258,14 @@ def main():
     processed = []
 
     # Process featured article first
-    log(f"Processing featured Security/Cryptography article: {featured_article['title']}")
-    new_summary = rewrite_blurb(featured_article["title"], featured_article["summary"], "security and cryptography")
-    new_headline = rewrite_title(featured_article["title"], "security and cryptography", featured_article["summary"], new_summary)
+    title = featured_article["title"]
+    summary = featured_article["summary"]
+    domain = "security and cryptography"
+    log(f"Processing featured Security/Cryptography article: {title}")
+    new_summary = rewrite_blurb(title, summary, domain)
+    new_headline = rewrite_title(
+        title, domain, summary, new_summary
+    )
 
     # Generate featured image
     log("Generating featured image for Security/Cryptography article")
@@ -251,16 +286,24 @@ def main():
     seen_ids.add(featured_article["id"])
 
     # Process remaining articles
+    domain = "security and cryptography"
     for idx, art in enumerate(remaining_articles, start=2):
-        log(f"Processing Security/Cryptography article {idx}/{len(articles_to_process)}: {art['title']}")
-        new_summary = rewrite_blurb(art["title"], art["summary"], "security and cryptography")
-        new_headline = rewrite_title(art["title"], "security and cryptography", art["summary"], new_summary)
+        title = art["title"]
+        summary = art["summary"]
+        log(
+            f"Processing Security/Cryptography article "
+            f"{idx}/{len(articles_to_process)}: {title}"
+        )
+        new_summary = rewrite_blurb(title, summary, domain)
+        new_headline = rewrite_title(title, domain, summary, new_summary)
 
-        # Generate thumbnail for every third article (articles 4, 7, 10, etc.)
+        # Generate thumbnail for every third article (4, 7, 10, etc.)
         image_data = None
         if (idx - 1) % 3 == 0 and idx > 1:
             log(f"Generating thumbnail for Security/Cryptography article {idx}")
-            image_data = generate_article_image(new_headline, new_summary, is_featured=False)
+            image_data = generate_article_image(
+                new_headline, new_summary, is_featured=False
+            )
 
         article_data = {
             "id": art["id"].split("/")[-1],
@@ -286,7 +329,8 @@ def main():
     log(f"Generated Security/Cryptography HTML at {output_path}")
 
     upload_via_ftp("output", "cr.html")
-    log(f"Finished processing {len(articles_to_process)} Security/Cryptography articles at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log(f"Finished processing {len(articles_to_process)} articles at {timestamp}")
 
 
 if __name__ == "__main__":

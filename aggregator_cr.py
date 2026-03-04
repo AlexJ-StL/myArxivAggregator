@@ -1,4 +1,18 @@
-# aggregator_cr.py - Security/Cryptography specific aggregator
+"""
+aggregator_cr.py - Security/Cryptography arXiv Aggregator
+
+This module provides functionality to fetch, process, and publish the latest
+research papers from the arXiv Security/Cryptography category. It retrieves
+papers from arXiv, generates article images from Unsplash, creates HTML
+pages, and uploads them via FTP.
+
+Main Features:
+    - Fetch recent papers from arXiv Security/Cryptography category
+    - Generate featured images using Unsplash API
+    - Create HTML pages with article listings
+    - Upload generated content via FTP
+"""
+
 import ftplib
 import hashlib
 import json
@@ -33,6 +47,12 @@ MAX_ARTICLES = 8
 
 
 def load_seen_ids():
+    """Load previously seen arXiv article IDs from the JSON file.
+
+    Returns:
+        set: A set of previously seen arXiv article IDs, or an empty set
+             if the file doesn't exist.
+    """
     try:
         with open(SEEN_IDS_FILE, encoding="utf-8") as f:
             return set(json.load(f))
@@ -41,11 +61,22 @@ def load_seen_ids():
 
 
 def save_seen_ids(seen_ids):
+    """Save the set of seen arXiv article IDs to a JSON file.
+
+    Args:
+        seen_ids (set): A set of arXiv article IDs to save.
+    """
     with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
         json.dump(list(seen_ids), f)
 
 
 def fetch_recent_arxiv():
+    """Fetch recent arXiv entries from the Security/Cryptography category.
+
+    Returns:
+        list: A list of dictionaries containing article information
+              (id, title, summary, published).
+    """
     log("Fetching recent Security/Cryptography arXiv entries...")
     feed = feedparser.parse(ARXIV_CR_URL)
     articles = []
@@ -156,7 +187,19 @@ def download_unsplash_photo(photo_data, filename, is_featured=False):
 
 
 def generate_article_image(title, summary, is_featured=False):
-    """Get an image from Unsplash for an article."""
+    """Get an image from Unsplash for an article.
+
+    Args:
+        title (str): The title of the article.
+        summary (str): The summary/abstract of the article.
+        is_featured (bool): Whether this is for a featured article.
+                          Defaults to False.
+
+    Returns:
+        dict or None: A dictionary containing image metadata (filename,
+                      path, alt_text, credit, credit_link, unsplash_link),
+                      or None if no image could be found/downloaded.
+    """
     # Generate search keywords
     search_query = generate_search_keywords(title, summary)
     log(f"Searching Unsplash for: {search_query}")
@@ -187,6 +230,12 @@ def generate_article_image(title, summary, is_featured=False):
 
 
 def upload_via_ftp(local_dir, remote_filename):
+    """Upload the generated HTML file and images to a FTP server.
+
+    Args:
+        local_dir (str): The local directory containing files to upload.
+        remote_filename (str): The filename to use on the remote server.
+    """
     log("Uploading Security/Cryptography page to FTP...")
     # Ensure FTP credentials are not None before passing to ftplib
     host = FTP_HOST if FTP_HOST is not None else ""
@@ -235,6 +284,7 @@ def upload_via_ftp(local_dir, remote_filename):
 
 
 def main():
+    """Main entry point for the Security/Cryptography aggregator."""
     seen_ids = load_seen_ids()
     all_articles = fetch_recent_arxiv()
 

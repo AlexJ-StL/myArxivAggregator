@@ -61,7 +61,7 @@ def search_unsplash_photo(query, is_featured=False):
     params = {"query": query, "per_page": 1, "orientation": "landscape" if is_featured else "squarish"}
 
     try:
-        response = requests.get(search_url, headers=headers, params=params)
+        response = requests.get(search_url, headers=headers, params=params, timeout=10)
         response.raise_for_status()
         data = response.json()
 
@@ -92,12 +92,12 @@ def download_unsplash_photo(photo_data, filename, is_featured=False):
         # REQUIRED: Trigger download endpoint as per Unsplash API guidelines
         # This is mandatory when using images in a way similar to downloading
         headers = {"Authorization": f"Client-ID {UNSPLASH_ACCESS_KEY}"}
-        download_response = requests.get(photo_data["download_url"], headers=headers)
+        download_response = requests.get(photo_data["download_url"], headers=headers, timeout=10)
         download_response.raise_for_status()
         log(f"Triggered Unsplash download endpoint for photo {photo_data['id']}")
 
         # Download the actual image using the hotlinked URL as required
-        response = requests.get(photo_data["url"])
+        response = requests.get(photo_data["url"], timeout=10)
         response.raise_for_status()
 
         # Save the image
@@ -122,7 +122,7 @@ def download_unsplash_photo(photo_data, filename, is_featured=False):
         log(f"Downloaded and saved image: {filename}")
         return True
 
-    except Exception as e:
+    except (OSError, IOError, requests.RequestException) as e:
         log(f"Error downloading image: {e}")
         return False
 

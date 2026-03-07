@@ -75,7 +75,7 @@ def clear_ftp_server():
 
             # Summary
             if cleared_html > 0 or cleared_images > 0:
-                log(f"🌐 FTP cleanup complete: {cleared_html} HTML files, {cleared_images} images cleared")
+                log(f"🌐 FTP cleanup: {cleared_html} HTML, {cleared_images} images cleared")
             else:
                 log("🌐 No files to clear on FTP server")
 
@@ -127,7 +127,7 @@ def clear_generated_content():
 
     # Summary
     if cleared_html > 0 or cleared_images > 0:
-        log(f"🧹 Local cleanup complete: {cleared_html} HTML files, {cleared_images} images cleared")
+        log(f"🧹 Local cleanup: {cleared_html} HTML, {cleared_images} images cleared")
     else:
         log("🧹 No local files to clear")
 
@@ -137,8 +137,13 @@ def run_aggregator(script_name, category_name):
     log(f"Starting {category_name} aggregator...")
 
     try:
-        # Run the aggregator script
-        result = subprocess.run([sys.executable, script_name], capture_output=True, text=True, timeout=600)  # 10 minute timeout
+        # Run the aggregator script (10 minute timeout)
+        result = subprocess.run(
+            [sys.executable, script_name],
+            capture_output=True,
+            text=True,
+            timeout=600,
+        )
 
         if result.returncode == 0:
             log(f"✅ {category_name} aggregator completed successfully")

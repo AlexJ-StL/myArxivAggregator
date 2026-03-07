@@ -1,13 +1,17 @@
+import html
 import os
 from datetime import datetime
 
 # Path to base template (HTML boilerplate with CSS placeholders)
-TEMPLATE_PATH = os.path.join('templates', 'base_template.html')
-ML_TEMPLATE_PATH = os.path.join('templates', 'ml_template.html')
-CV_TEMPLATE_PATH = os.path.join('templates', 'cv_template.html')
-CR_TEMPLATE_PATH = os.path.join('templates', 'cr_template.html')
-RO_TEMPLATE_PATH = os.path.join('templates', 'ro_template.html')
-HC_TEMPLATE_PATH = os.path.join('templates', 'hc_template.html')
+TEMPLATE_PATH = os.path.join("templates", "base_template.html")
+ML_TEMPLATE_PATH = os.path.join("templates", "ml_template.html")
+CV_TEMPLATE_PATH = os.path.join("templates", "cv_template.html")
+CR_TEMPLATE_PATH = os.path.join("templates", "cr_template.html")
+RO_TEMPLATE_PATH = os.path.join("templates", "ro_template.html")
+HC_TEMPLATE_PATH = os.path.join("templates", "hc_template.html")
+
+# Unsplash URL with UTM parameters (constant)
+UNSPLASH_UTM_URL = "https://unsplash.com/?utm_source=arxiv_aggregator&utm_medium=referral"
 
 
 def load_template(category="AI Research"):
@@ -24,18 +28,20 @@ def load_template(category="AI Research"):
         template_path = HC_TEMPLATE_PATH
     else:
         template_path = TEMPLATE_PATH
-    
-    with open(template_path, 'r', encoding='utf-8') as f:
+
+    with open(template_path, encoding="utf-8") as f:
         return f.read()
 
 
 def clean_headline(title):
     """Remove trailing periods from headlines as they shouldn't end with periods."""
-    return title.rstrip('.')
+    return title.rstrip(".")
+
 
 def convert_to_pdf_url(url):
     """Convert arXiv abstract URL to PDF URL by replacing /abs/ with /pdf/"""
-    return url.replace('/abs/', '/pdf/')
+    return url.replace("/abs/", "/pdf/")
+
 
 def generate_html(articles, category="AI Research"):
     """Generate a complete HTML page given a list of article dicts.
@@ -46,7 +52,7 @@ def generate_html(articles, category="AI Research"):
       - blurb: rewritten summary
       - url: link to the arXiv abstract
       - featured: optional bool
-    
+
     Args:
       - category: The category name to display (e.g., "AI Research", "Machine Learning")
     """
@@ -56,7 +62,7 @@ def generate_html(articles, category="AI Research"):
     featured = None
     others = []
     for art in articles:
-        if art.get('featured'):
+        if art.get("featured"):
             featured = art
         else:
             others.append(art)
@@ -76,32 +82,39 @@ def generate_html(articles, category="AI Research"):
 
     # Build HTML segments for main content
     html_segments = ""
-    
+
     # Featured article section
     if featured:
         image_html = ""
-        if featured.get('image'):
-            img = featured['image']
+        if featured.get("image"):
+            img = featured["image"]
             credit_html = ""
-            if img.get('credit'):
-                # Unsplash requires attribution to both photographer and Unsplash with UTM parameters
-                credit_html = f'''<div class="photo-credit">
-                    <a href="{img.get("credit_link", "#")}" target="_blank">{img["credit"]}</a> •
-                    <a href="{img.get("unsplash_link", "https://unsplash.com/?utm_source=arxiv_aggregator&utm_medium=referral")}" target="_blank">Unsplash</a>
-                </div>'''
+            if img.get("credit"):
+                # Unsplash requires attribution to both photographer and Unsplash
+                credit_link = html.escape(img.get("credit_link", "#"))
+                unsplash_link = html.escape(img.get("unsplash_link", UNSPLASH_UTM_URL))
+                credit = html.escape(img["credit"])
+                credit_html = f"""<div class="photo-credit">
+                    <a href="{credit_link}" target="_blank">{credit}</a> •
+                    <a href="{unsplash_link}" target="_blank">Unsplash</a>
+                </div>"""
+            alt_text = html.escape(img.get("alt_text", f"Photo related to: {featured['title']}"))
             image_html = f"""
         <div class="featured-image">
-          <img src="{img['path']}" alt="{img['alt_text']}" class="article-img" />
+          <img src="{img["path"]}" alt="{alt_text}" class="article-img" />
           {credit_html}
         </div>"""
-        
+
+        pdf_url = convert_to_pdf_url(featured["url"])
+        escaped_title = html.escape(clean_headline(featured["title"]))
+        escaped_blurb = html.escape(featured["blurb"])
         html_segments += f"""
       <article class="featured-article">
         <div class="category-tag">FEATURED {category.upper()}</div>
-        <h1>{clean_headline(featured['title'])}</h1>
+        <h1>{escaped_title}</h1>
         <div class="byline">From arXiv • Latest Research</div>{image_html}
-        <p class="summary">{featured['blurb']}</p>
-        <a href="{convert_to_pdf_url(featured['url'])}" target="_blank" class="read-more">Read Full Paper →</a>
+        <p class="summary">{escaped_blurb}</p>
+        <a href="{pdf_url}" target="_blank" class="read-more">Read Full Paper →</a>
       </article>
 """
 
@@ -110,38 +123,48 @@ def generate_html(articles, category="AI Research"):
         html_segments += '\n      <div class="articles-grid">\n'
         for art in main_articles:
             image_html = ""
-            if art.get('image'):
-                img = art['image']
+            if art.get("image"):
+                img = art["image"]
                 credit_html = ""
-                if img.get('credit'):
-                    # Unsplash requires attribution to both photographer and Unsplash with UTM parameters
-                    credit_html = f'''<div class="photo-credit-small">
-                        <a href="{img.get("credit_link", "#")}" target="_blank">{img["credit"]}</a> •
-                        <a href="{img.get("unsplash_link", "https://unsplash.com/?utm_source=arxiv_aggregator&utm_medium=referral")}" target="_blank">Unsplash</a>
-                    </div>'''
+                if img.get("credit"):
+                    # Unsplash requires attribution to both photographer and Unsplash
+                    credit_link = html.escape(img.get("credit_link", "#"))
+                    unsplash_link = html.escape(img.get("unsplash_link", UNSPLASH_UTM_URL))
+                    credit = html.escape(img["credit"])
+                    credit_html = f"""<div class="photo-credit-small">
+                        <a href="{credit_link}" target="_blank">{credit}</a> •
+                        <a href="{unsplash_link}" target="_blank">Unsplash</a>
+                    </div>"""
+                alt_text = html.escape(img.get("alt_text", f"Photo related to: {art['title']}"))
                 image_html = f"""
           <div class="article-thumbnail">
-            <img src="{img['path']}" alt="{img['alt_text']}" class="thumbnail-img" />
+            <img src="{img["path"]}" alt="{alt_text}" class="thumbnail-img" />
             {credit_html}
           </div>"""
-            
+
+            pdf_url = convert_to_pdf_url(art["url"])
+            escaped_title = html.escape(clean_headline(art["title"]))
+            escaped_blurb = html.escape(art["blurb"])
             html_segments += f"""        <article class="article">
           {image_html}
-          <h2>{clean_headline(art['title'])}</h2>
-          <p class="summary">{art['blurb']}</p>
-          <a href="{convert_to_pdf_url(art['url'])}" target="_blank" class="read-more">Read Paper →</a>
+          <h2>{escaped_title}</h2>
+          <p class="summary">{escaped_blurb}</p>
+          <a href="{pdf_url}" target="_blank" class="read-more">Read Paper →</a>
         </article>
 """
-        html_segments += '      </div>\n'
+        html_segments += "      </div>\n"
 
     # Build sidebar articles HTML
     sidebar_html = ""
     if sidebar_articles:
         for art in sidebar_articles:
+            pdf_url = convert_to_pdf_url(art["url"])
+            title = html.escape(clean_headline(art["title"]))
+            blurb = html.escape(art["blurb"])
             sidebar_html += f"""        <article class="sidebar-article">
-          <h3><a href="{convert_to_pdf_url(art['url'])}" target="_blank">{clean_headline(art['title'])}</a></h3>
-          <p class="summary">{art['blurb']}</p>
-          <a href="{convert_to_pdf_url(art['url'])}" target="_blank" class="read-more">Read Paper →</a>
+          <h3><a href="{pdf_url}" target="_blank">{title}</a></h3>
+          <p class="summary">{blurb}</p>
+          <a href="{pdf_url}" target="_blank" class="read-more">Read Paper →</a>
         </article>
 """
 
@@ -151,5 +174,5 @@ def generate_html(articles, category="AI Research"):
 
     # Insert current date
     today = datetime.now().strftime("%B %d, %Y")
-    html = html.replace('{date}', today)
+    html = html.replace("{date}", today)
     return html

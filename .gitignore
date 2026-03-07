@@ -52,3 +52,6 @@ Thumbs.db
 # State files (runtime generated)
 featured_arxiv_ids.json
 seen_arxiv_ids.json
+
+# Generated output
+output/

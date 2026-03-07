@@ -15,30 +15,31 @@ A Python-based web application that automatically fetches, processes, and publis
 ## Architecture
 
 ```
-arxiv_aggregator/
+myArxivAggregator/
 ├── aggregator.py           # Main AI aggregator
 ├── aggregator_ml.py        # Machine Learning aggregator
 ├── aggregator_cv.py        # Computer Vision aggregator
 ├── aggregator_ro.py        # Robotics aggregator
 ├── aggregator_cr.py        # Cryptography/Security aggregator
 ├── aggregator_hc.py        # Human-Computer Interaction aggregator
-├── config.py              # Configuration management
-├── content_utils.py       # Content processing utilities
-├── featured_tracker.py    # Featured article selection logic
-├── generate_html.py       # HTML generation utilities
-├── run_all_aggregators.py # Orchestration script
-├── templates/             # HTML templates
+├── config.py               # Configuration management
+├── content_utils.py        # Content processing utilities
+├── featured_tracker.py     # Featured article selection logic
+├── generate_html.py        # HTML generation utilities
+├── run_all_aggregators.py  # Orchestration script
+├── templates/              # HTML templates
 │   ├── base_template.html
 │   ├── ml_template.html
 │   ├── cv_template.html
 │   ├── ro_template.html
-│   └── cr_template.html
-└── output/               # Generated HTML files and images
+│   ├── cr_template.html
+│   └── hc_template.html
+└── output/                 # Generated HTML files and images
 ```
 
 ## Prerequisites
 
-- **Python 3.8+**
+- **Python 3.13**
 - **Ollama** (for AI content generation)
   - Install from [ollama.ai](https://ollama.ai)
   - Pull required models: `ollama pull llama3.1:8b` and `ollama pull llava:latest`
@@ -49,8 +50,8 @@ arxiv_aggregator/
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/jgravelle/arxiv_aggregator.git
-   cd arxiv_aggregator
+   git clone https://github.com/AlexJ-StL/myArxivAggregator.git
+   cd myArxivAggregator
    ```
 
 2. **Install dependencies**:

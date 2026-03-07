@@ -1,0 +1,235 @@
+[
+  {
+    "cell": null,
+    "code": "F841",
+    "end_location": {
+      "column": 73,
+      "row": 278
+    },
+    "filename": "C:\\Users\\AlexJ\\Documents\\Coding\\Repos\\my-repos\\myArxivAggregator\\tests\\integration\\test_aggregator_workflow.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 73,
+            "row": 278
+          },
+          "location": {
+            "column": 56,
+            "row": 278
+          }
+        }
+      ],
+      "message": "Remove assignment to unused variable `mock_download`"
+    },
+    "location": {
+      "column": 60,
+      "row": 278
+    },
+    "message": "Local variable `mock_download` is assigned to but never used",
+    "noqa_row": 278,
+    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
+  },
+  {
+    "cell": null,
+    "code": "F841",
+    "end_location": {
+      "column": 62,
+      "row": 70
+    },
+    "filename": "C:\\Users\\AlexJ\\Documents\\Coding\\Repos\\my-repos\\myArxivAggregator\\tests\\unit\\test_aggregator_unit.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 62,
+            "row": 70
+          },
+          "location": {
+            "column": 49,
+            "row": 70
+          }
+        }
+      ],
+      "message": "Remove assignment to unused variable `mock_file`"
+    },
+    "location": {
+      "column": 53,
+      "row": 70
+    },
+    "message": "Local variable `mock_file` is assigned to but never used",
+    "noqa_row": 70,
+    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
+  },
+  {
+    "cell": null,
+    "code": "F841",
+    "end_location": {
+      "column": 62,
+      "row": 96
+    },
+    "filename": "C:\\Users\\AlexJ\\Documents\\Coding\\Repos\\my-repos\\myArxivAggregator\\tests\\unit\\test_featured_tracker.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 62,
+            "row": 96
+          },
+          "location": {
+            "column": 49,
+            "row": 96
+          }
+        }
+      ],
+      "message": "Remove assignment to unused variable `mock_file`"
+    },
+    "location": {
+      "column": 53,
+      "row": 96
+    },
+    "message": "Local variable `mock_file` is assigned to but never used",
+    "noqa_row": 96,
+    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
+  },
+  {
+    "cell": null,
+    "code": "F841",
+    "end_location": {
+      "column": 62,
+      "row": 102
+    },
+    "filename": "C:\\Users\\AlexJ\\Documents\\Coding\\Repos\\my-repos\\myArxivAggregator\\tests\\unit\\test_featured_tracker.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 62,
+            "row": 102
+          },
+          "location": {
+            "column": 49,
+            "row": 102
+          }
+        }
+      ],
+      "message": "Remove assignment to unused variable `mock_file`"
+    },
+    "location": {
+      "column": 53,
+      "row": 102
+    },
+    "message": "Local variable `mock_file` is assigned to but never used",
+    "noqa_row": 102,
+    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
+  },
+  {
+    "cell": null,
+    "code": "F841",
+    "end_location": {
+      "column": 66,
+      "row": 207
+    },
+    "filename": "C:\\Users\\AlexJ\\Documents\\Coding\\Repos\\my-repos\\myArxivAggregator\\tests\\unit\\test_featured_tracker.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 66,
+            "row": 207
+          },
+          "location": {
+            "column": 54,
+            "row": 207
+          }
+        }
+      ],
+      "message": "Remove assignment to unused variable `mock_add`"
+    },
+    "location": {
+      "column": 58,
+      "row": 207
+    },
+    "message": "Local variable `mock_add` is assigned to but never used",
+    "noqa_row": 207,
+    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 76,
+      "row": 364
+    },
+    "filename": "C:\\Users\\AlexJ\\Documents\\Coding\\Repos\\my-repos\\myArxivAggregator\\tests\\unit\\test_generate_html.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 363
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 363,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 76,
+      "row": 371
+    },
+    "filename": "C:\\Users\\AlexJ\\Documents\\Coding\\Repos\\my-repos\\myArxivAggregator\\tests\\unit\\test_generate_html.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 370
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 370,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "F403",
+    "end_location": {
+      "column": 26,
+      "row": 5
+    },
+    "filename": "C:\\Users\\AlexJ\\Documents\\Coding\\Repos\\my-repos\\myArxivAggregator\\typings\\feedparser\\api.pyi",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 5
+    },
+    "message": "`from .exceptions import *` used; unable to detect undefined names",
+    "noqa_row": 5,
+    "url": "https://docs.astral.sh/ruff/rules/undefined-local-with-import-star"
+  },
+  {
+    "cell": null,
+    "code": "F403",
+    "end_location": {
+      "column": 20,
+      "row": 6
+    },
+    "filename": "C:\\Users\\AlexJ\\Documents\\Coding\\Repos\\my-repos\\myArxivAggregator\\typings\\feedparser\\api.pyi",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 6
+    },
+    "message": "`from .sgml import *` used; unable to detect undefined names",
+    "noqa_row": 6,
+    "url": "https://docs.astral.sh/ruff/rules/undefined-local-with-import-star"
+  }
+]

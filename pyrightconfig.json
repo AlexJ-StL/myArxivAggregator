@@ -1,12 +1,12 @@
 {
-    "include": ["typings", "."],
-    "extraPaths": ["./typings"],
-    "pythonVersion": "3.13",
-    "typeCheckingMode": "standard",
-    "venvPath": ".",
-    "pythonExecutionEnvurations": [
-        {
-            "root": "."
-        }
-    ]
+  "include": ["typings", "."],
+  "extraPaths": ["./typings"],
+  "pythonVersion": "3.13",
+  "typeCheckingMode": "strict",
+  "venvPath": ".",
+  "pythonExecutionEnvurations": [
+    {
+      "root": "."
+    }
+  ]
 }

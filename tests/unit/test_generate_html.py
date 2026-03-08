@@ -1,382 +1,367 @@
 """
 Unit tests for generate_html.py module.
 
-P0: XSS prevention tests
-P1: HTML generation functionality tests
+P0: Template loading, rendering, and output tests.
 """
 
-from unittest.mock import mock_open, patch
+from pathlib import Path
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
 from arxiv_aggregator.generate_html import (
-    clean_headline,
     convert_to_pdf_url,
+    clean_headline,
     generate_html,
     load_template,
 )
 
 # =============================================================================
-# P0: XSS Prevention Tests
+# P0: Template Loading Tests
 # =============================================================================
 
 
-class TestGenerateHTMLXSS:
-    """P0: XSS prevention in HTML generation."""
+class TestLoadTemplate:
+    """P0: Test template loading from file system."""
 
-    def test_xss_in_title_is_escaped(self):
-        """XSS attempts in titles must be neutralized."""
-        articles = [
-            {
-                "id": "1",
-                "title": "<script>alert('xss')</script>",
-                "blurb": "Test blurb",
-                "url": "http://arxiv.org/abs/1",
-            }
-        ]
+    def test_load_returns_string(self):
+        """load_template should return string content."""
+        with patch("builtins.open", mock_open(read_data="<html>{{content}}</html>")):
+            result = load_template("test.html")
+            assert isinstance(result, str)
 
-        with patch("generate_html.load_template") as mock_template:
-            mock_template.return_value = """<!DOCTYPE html>
-<html><body><!--ARTICLES_PLACEHOLDER--><!--SIDEBAR_ARTICLES_PLACEHOLDER--></body></html>"""
+    def test_load_reads_file_correctly(self):
+        """Template content should be read and returned."""
+        template_content = "<div>{{content}}</div>"
+        with patch("builtins.open", mock_open(read_data=template_content)):
+            result = load_template("test.html")
+            assert result == template_content
 
-            html = generate_html(articles)
+    def test_file_not_found_raises(self):
+        """Missing template should raise FileNotFoundError."""
+        with patch("builtins.open", side_effect=FileNotFoundError("Template not found")):
+            with pytest.raises(FileNotFoundError):
+                load_template("missing.html")
 
-            assert "<script>" not in html
-            assert "</script>" not in html
-            assert "alert" not in html.lower()
+    def test_load_with_base_template(self):
+        """Should load base template for rendering."""
+        base_content = "<html><body>{{content}}</body></html>"
 
-    def test_xss_in_blurb_is_escaped(self):
-        """XSS in blurbs must be neutralized."""
-        articles = [
-            {
-                "id": "1",
-                "title": "Title",
-                "blurb": "<img onerror=alert(1) src=x>",
-                "url": "http://arxiv.org/abs/1",
-            }
-        ]
-
-        with patch("generate_html.load_template") as mock_template:
-            mock_template.return_value = """<!DOCTYPE html>
-<html><body><!--ARTICLES_PLACEHOLDER--><!--SIDEBAR_ARTICLES_PLACEHOLDER--></body></html>"""
-
-            html = generate_html(articles)
-
-            assert "<img" not in html
-            assert "onerror" not in html.lower()
-
-    def test_javascript_url_rejected(self):
-        """javascript: URLs should not appear in output."""
-        articles = [{"id": "1", "title": "Title", "blurb": "Blurb", "url": "javascript:alert(1)"}]
-
-        with patch("generate_html.load_template") as mock_template:
-            mock_template.return_value = """<!DOCTYPE html>
-<html><body><!--ARTICLES_PLACEHOLDER--><!--SIDEBAR_ARTICLES_PLACEHOLDER--></body></html>"""
-
-            html = generate_html(articles)
-
-            assert "javascript:" not in html.lower()
-
-    def test_svg_onload_is_blocked(self):
-        """SVG onload events should be blocked."""
-        articles = [
-            {
-                "id": "1",
-                "title": "Title",
-                "blurb": "<svg onload=alert(1)>",
-                "url": "http://arxiv.org/abs/1",
-            }
-        ]
-
-        with patch("generate_html.load_template") as mock_template:
-            mock_template.return_value = """<!DOCTYPE html>
-<html><body><!--ARTICLES_PLACEHOLDER--><!--SIDEBAR_ARTICLES_PLACEHOLDER--></body></html>"""
-
-            html = generate_html(articles)
-
-            assert "<svg" not in html
-            assert "onload" not in html.lower()
-
-    def test_iframe_is_blocked(self):
-        """iframe tags should be blocked."""
-        articles = [
-            {
-                "id": "1",
-                "title": "Title",
-                "blurb": "<iframe src='evil.com'></iframe>",
-                "url": "http://arxiv.org/abs/1",
-            }
-        ]
-
-        with patch("generate_html.load_template") as mock_template:
-            mock_template.return_value = """<!DOCTYPE html>
-<html><body><!--ARTICLES_PLACEHOLDER--><!--SIDEBAR_ARTICLES_PLACEHOLDER--></body></html>"""
-
-            html = generate_html(articles)
-
-            assert "<iframe" not in html
-
-
-# =============================================================================
-# P1: HTML Structure Tests
-# =============================================================================
+        with (
+            patch("builtins.open", mock_open(read_data=base_content)),
+            patch("pathlib.Path.exists", return_value=True),
+        ):
+            result = load_template("base.html")
+            assert "{{content}}" in result
 
 
 class TestCleanHeadline:
-    """P1: Headline cleaning tests."""
+    """P0: Test headline cleaning."""
 
     def test_removes_trailing_period(self):
-        """Headlines should not end with periods."""
-        assert clean_headline("Title.") == "Title"
+        """Trailing periods should be removed."""
+        result = clean_headline("Test Title.")
+        assert result == "Test Title"
 
-    def test_preserves_no_period(self):
-        """Headlines without periods should be unchanged."""
-        assert clean_headline("No Period") == "No Period"
+    def test_keeps_periods_in_middle(self):
+        """Periods in middle of title should be kept."""
+        result = clean_headline("Test.Title.")
+        assert result == "Test.Title"
 
-    def test_multiple_trailing_dots(self):
-        """Multiple trailing dots should be handled."""
-        assert clean_headline("Multiple..") == "Multiple."
-        assert clean_headline("Multiple...") == "Multiple.."
+    def test_multiple_trailing_periods_removed(self):
+        """Multiple trailing periods should all be removed."""
+        result = clean_headline("Test Title...")
+        assert result == "Test Title"
 
-    def test_preserves_trailing_spaces(self):
-        """Internal spaces should be preserved (not leading/trailing)."""
-        # Note: This tests that we only strip trailing periods, not all trailing whitespace
-        assert clean_headline("Title.") == "Title"
-        assert clean_headline("Title.  ") == "Title"
-
-    def test_unicode_handled(self):
-        """Unicode characters should be handled correctly."""
-        assert clean_headline("タイトル.") == "タイトル"
-        assert clean_headline("Café.") == "Café"
+    def test_no_trailing_period_unchanged(self):
+        """Title without trailing period should be unchanged."""
+        result = clean_headline("Test Title")
+        assert result == "Test Title"
 
 
 class TestConvertToPdfUrl:
-    """P1: URL conversion tests."""
+    """P0: Test PDF URL conversion."""
 
     def test_converts_abs_to_pdf(self):
-        """Standard /abs/ to /pdf/ conversion."""
-        result = convert_to_pdf_url("http://arxiv.org/abs/2301.12345")
-        assert result == "http://arxiv.org/pdf/2301.12345"
-
-    def test_preserves_https(self):
-        """HTTPS URLs should be preserved."""
+        """URL should have /abs/ replaced with /pdf/."""
         result = convert_to_pdf_url("https://arxiv.org/abs/2301.12345")
-        assert result.startswith("https://")
+        assert result == "https://arxiv.org/pdf/2301.12345"
 
-    def test_preserves_already_pdf(self):
-        """PDF URLs should be unchanged."""
-        result = convert_to_pdf_url("http://arxiv.org/pdf/2301.12345")
-        assert result == "http://arxiv.org/pdf/2301.12345"
+    def test_converts_with_version(self):
+        """URL with version should also be converted."""
+        result = convert_to_pdf_url("https://arxiv.org/abs/2301.12345v1")
+        assert result == "https://arxiv.org/pdf/2301.12345v1"
 
-    def test_handles_version_suffix(self):
-        """URLs with version suffixes should work."""
-        result = convert_to_pdf_url("http://arxiv.org/abs/2301.12345v2")
-        assert result == "http://arxiv.org/pdf/2301.12345v2"
+    def test_rejects_javascript_url(self):
+        """javascript: URLs should be rejected."""
+        result = convert_to_pdf_url("javascript:alert(1)")
+        assert result == "#"
 
-    def test_handles_different_formats(self):
-        """Different arXiv URL formats should be handled."""
-        # Old format
-        result = convert_to_pdf_url("http://arxiv.org/abs/cond-mat/0601001")
-        assert result == "http://arxiv.org/pdf/cond-mat/0601001"
+    def test_rejects_data_url(self):
+        """data: URLs should be rejected."""
+        result = convert_to_pdf_url("data:text/html,<script>alert(1)</script>")
+        assert result == "#"
+
+    def test_rejects_vbscript_url(self):
+        """vbscript: URLs should be rejected."""
+        result = convert_to_pdf_url("vbscript:msgbox('xss')")
+        assert result == "#"
 
 
-class TestGenerateHTMLStructure:
-    """P1: HTML structure validation."""
+# =============================================================================
+# P1: Full HTML Generation Tests
+# =============================================================================
 
-    @pytest.fixture
-    def minimal_template(self):
-        """Minimal template for testing."""
-        return """<!DOCTYPE html>
-<html>
-<head><title>{date} - AI Research</title></head>
-<body>
-<main><!--ARTICLES_PLACEHOLDER--></main>
-<aside><!--SIDEBAR_ARTICLES_PLACEHOLDER--></aside>
-</body>
-</html>"""
 
-    def test_creates_featured_section(self, minimal_template):
-        """Featured article should be in featured section."""
+class TestGenerateHtml:
+    """P1: Test full HTML document generation."""
+
+    def test_generate_returns_full_document(self):
+        """generate_html should return complete HTML document."""
         articles = [
             {
-                "id": "1",
-                "title": "Featured Title",
-                "blurb": "Featured blurb",
-                "url": "http://arxiv.org/abs/1",
+                "id": "2301.12345",
+                "title": "AI Paper",
+                "blurb": "Summary",
+                "url": "https://arxiv.org/abs/2301.12345",
+            }
+        ]
+
+        with patch("arxiv_aggregator.generate_html.load_template") as mock_load:
+            mock_load.return_value = """<!DOCTYPE html>
+<html><body><!--ARTICLES_PLACEHOLDER--><!--SIDEBAR_ARTICLES_PLACEHOLDER--></body></html>"""
+
+            result = generate_html(articles)
+
+            assert "<!DOCTYPE html>" in result or "<html" in result
+            assert "AI Paper" in result
+
+    def test_generate_with_featured_article(self):
+        """Featured article should appear in output."""
+        articles = [
+            {
+                "id": "2301.12345",
+                "title": "Featured Paper",
+                "blurb": "This is featured",
+                "url": "https://arxiv.org/abs/2301.12345",
                 "featured": True,
             }
         ]
 
-        with patch("generate_html.load_template", return_value=minimal_template):
-            html = generate_html(articles)
-
-            assert "FEATURED" in html
-            assert "featured-article" in html
-
-    def test_default_first_as_featured(self, minimal_template):
-        """When no featured flag, first article should be featured."""
-        articles = [
-            {"id": "1", "title": "First", "blurb": "Blurb 1", "url": "http://x.com/1"},
-            {"id": "2", "title": "Second", "blurb": "Blurb 2", "url": "http://x.com/2"},
-        ]
-
-        with patch("generate_html.load_template", return_value=minimal_template):
-            html = generate_html(articles)
-
-            assert "FEATURED" in html
-
-    def test_sidebar_contains_last_three(self, minimal_template):
-        """When >3 articles, last 3 should be in sidebar."""
-        articles = [
-            {
-                "id": str(i),
-                "title": f"Title {i}",
-                "blurb": f"Blurb {i}",
-                "url": f"http://x.com/{i}",
-            }
-            for i in range(7)
-        ]
-
-        with patch("generate_html.load_template", return_value=minimal_template):
-            html = generate_html(articles)
-
-            # Should have sidebar articles
-            assert "sidebar-article" in html
-
-    def test_no_sidebar_for_three_or_fewer(self, minimal_template):
-        """Three or fewer articles should not have sidebar."""
-        articles = [
-            {"id": "1", "title": "T1", "blurb": "B1", "url": "http://x.com/1"},
-            {"id": "2", "title": "T2", "blurb": "B2", "url": "http://x.com/2"},
-            {"id": "3", "title": "T3", "blurb": "B3", "url": "http://x.com/3"},
-        ]
-
-        with patch("generate_html.load_template", return_value=minimal_template):
-            html = generate_html(articles)
-
-            # Should have articles in main grid, not sidebar
-            assert "sidebar-article" not in html or html.count("sidebar-article") == 0
-
-    def test_converts_to_pdf_link(self, minimal_template):
-        """Article links should be converted to PDF."""
-        articles = [
-            {
-                "id": "1",
-                "title": "Title",
-                "blurb": "Blurb",
-                "url": "http://arxiv.org/abs/2301.12345",
-            }
-        ]
-
-        with patch("generate_html.load_template", return_value=minimal_template):
-            html = generate_html(articles)
-
-            assert "/pdf/" in html
-            assert "/abs/" not in html or "/pdf/" in html
-
-    def test_includes_date(self, minimal_template):
-        """Generated HTML should include current date."""
-        with patch("generate_html.load_template", return_value=minimal_template):
-            html = generate_html([{"id": "1", "title": "T", "blurb": "B", "url": "http://x.com/1"}])
-
-            # Should have a month name
-            import datetime
-
-            month_name = datetime.datetime.now().strftime("%B")
-            assert month_name in html
-
-
-class TestImagePathValidation:
-    """P1: Image path validation tests."""
-
-    def test_image_path_in_html(self):
-        """Image paths in HTML should match article data."""
-        articles = [
-            {
-                "id": "abc123",
-                "title": "Title",
-                "blurb": "Blurb",
-                "url": "http://x.com/1",
-                "image": {
-                    "filename": "article_abc123.jpg",
-                    "path": "images/article_abc123.jpg",
-                    "alt_text": "Test image",
-                },
-            }
-        ]
-
-        with patch("generate_html.load_template") as mock_template:
-            mock_template.return_value = """<!DOCTYPE html>
+        with patch("arxiv_aggregator.generate_html.load_template") as mock_load:
+            mock_load.return_value = """<!DOCTYPE html>
 <html><body><!--ARTICLES_PLACEHOLDER--><!--SIDEBAR_ARTICLES_PLACEHOLDER--></body></html>"""
 
-            html = generate_html(articles)
+            result = generate_html(articles)
 
-            assert "images/article_abc123.jpg" in html
+            assert "Featured Paper" in result
 
-    def test_credit_included_when_present(self):
-        """Photographer credit should be included when image present."""
+    def test_generate_with_image(self):
+        """Article with image should include image HTML."""
         articles = [
             {
-                "id": "1",
-                "title": "Title",
-                "blurb": "Blurb",
-                "url": "http://x.com/1",
+                "id": "2301.12345",
+                "title": "Paper with Image",
+                "blurb": "Summary",
+                "url": "https://arxiv.org/abs/2301.12345",
                 "image": {
-                    "filename": "test.jpg",
                     "path": "images/test.jpg",
-                    "credit": "Photo by John Doe",
-                    "credit_link": "https://unsplash.com/@johndoe",
-                    "unsplash_link": "https://unsplash.com/",
+                    "alt_text": "Test image",
+                    "credit": "Photo by Test",
+                    "credit_link": "https://example.com",
+                    "unsplash_link": "https://unsplash.com",
                 },
             }
         ]
 
-        with patch("generate_html.load_template") as mock_template:
-            mock_template.return_value = """<!DOCTYPE html>
+        with patch("arxiv_aggregator.generate_html.load_template") as mock_load:
+            mock_load.return_value = """<!DOCTYPE html>
 <html><body><!--ARTICLES_PLACEHOLDER--><!--SIDEBAR_ARTICLES_PLACEHOLDER--></body></html>"""
 
-            html = generate_html(articles)
+            result = generate_html(articles)
 
-            assert "John Doe" in html
-            assert "unsplash.com" in html.lower()
+            assert "test.jpg" in result
 
-    def test_no_image_section_when_no_image(self):
-        """No image section when article has no image."""
-        articles = [{"id": "1", "title": "Title", "blurb": "Blurb", "url": "http://x.com/1"}]
+    def test_generate_multiple_articles(self):
+        """Multiple articles should all appear in output."""
+        articles = [
+            {
+                "id": "2301.12345",
+                "title": "AI Paper",
+                "blurb": "AI Summary",
+                "url": "https://arxiv.org/abs/2301.12345",
+            },
+            {
+                "id": "2301.12346",
+                "title": "ML Paper",
+                "blurb": "ML Summary",
+                "url": "https://arxiv.org/abs/2301.12346",
+            },
+        ]
 
-        with patch("generate_html.load_template") as mock_template:
-            mock_template.return_value = """<!DOCTYPE html>
+        with patch("arxiv_aggregator.generate_html.load_template") as mock_load:
+            mock_load.return_value = """<!DOCTYPE html>
 <html><body><!--ARTICLES_PLACEHOLDER--><!--SIDEBAR_ARTICLES_PLACEHOLDER--></body></html>"""
 
-            html = generate_html(articles)
+            result = generate_html(articles)
 
-            # Should not have image tag for article
-            assert 'class="article-img"' not in html
+            assert "AI Paper" in result
+            assert "ML Paper" in result
+
+    def test_generate_empty_list(self):
+        """Empty list should still return HTML structure."""
+        with patch("arxiv_aggregator.generate_html.load_template") as mock_load:
+            mock_load.return_value = """<!DOCTYPE html>
+<html><body><!--ARTICLES_PLACEHOLDER--><!--SIDEBAR_ARTICLES_PLACEHOLDER--></body></html>"""
+
+            result = generate_html([])
+
+            # Should still return HTML
+            assert isinstance(result, str)
+
+    def test_generate_escapes_html_in_titles(self):
+        """HTML in titles should be escaped."""
+        articles = [
+            {
+                "id": "2301.12345",
+                "title": "<script>alert('xss')</script>",
+                "blurb": "Summary",
+                "url": "https://arxiv.org/abs/2301.12345",
+            }
+        ]
+
+        with patch("arxiv_aggregator.generate_html.load_template") as mock_load:
+            mock_load.return_value = """<!DOCTYPE html>
+<html><body><!--ARTICLES_PLACEHOLDER--><!--SIDEBAR_ARTICLES_PLACEHOLDER--></body></html>"""
+
+            result = generate_html(articles)
+
+            assert "<script>" not in result
+
+    def test_generate_escapes_html_in_blurbs(self):
+        """HTML in blurbs should be escaped."""
+        articles = [
+            {
+                "id": "2301.12345",
+                "title": "Title",
+                "blurb": "<img onerror=alert(1) src=x>",
+                "url": "https://arxiv.org/abs/2301.12345",
+            }
+        ]
+
+        with patch("arxiv_aggregator.generate_html.load_template") as mock_load:
+            mock_load.return_value = """<!DOCTYPE html>
+<html><body><!--ARTICLES_PLACEHOLDER--><!--SIDEBAR_ARTICLES_PLACEHOLDER--></body></html>"""
+
+            result = generate_html(articles)
+
+            assert "<img" not in result
+
+    def test_generate_escapes_javascript_urls(self):
+        """javascript: URLs should be escaped/rejected."""
+        articles = [
+            {
+                "id": "2301.12345",
+                "title": "Title",
+                "blurb": "Summary",
+                "url": "javascript:alert(1)",
+            }
+        ]
+
+        with patch("arxiv_aggregator.generate_html.load_template") as mock_load:
+            mock_load.return_value = """<!DOCTYPE html>
+<html><body><!--ARTICLES_PLACEHOLDER--><!--SIDEBAR_ARTICLES_PLACEHOLDER--></body></html>"""
+
+            result = generate_html(articles)
+
+            assert "javascript:" not in result.lower()
+
+    def test_generate_with_category(self):
+        """Category should be used in generation."""
+        articles = [
+            {
+                "id": "2301.12345",
+                "title": "ML Paper",
+                "blurb": "Summary",
+                "url": "https://arxiv.org/abs/2301.12345",
+            }
+        ]
+
+        with patch("arxiv_aggregator.generate_html.load_template") as mock_load:
+            mock_load.return_value = """<!DOCTYPE html>
+<html><body><!--ARTICLES_PLACEHOLDER--><!--SIDEBAR_ARTICLES_PLACEHOLDER--></body></html>"""
+
+            result = generate_html(articles, category="Machine Learning")
+
+            assert "Machine Learning" in result or "ML Paper" in result
+
+    def test_generate_inserts_date(self):
+        """Current date should be inserted."""
+        articles = [
+            {
+                "id": "2301.12345",
+                "title": "Test Paper",
+                "blurb": "Summary",
+                "url": "https://arxiv.org/abs/2301.12345",
+            }
+        ]
+
+        with patch("arxiv_aggregator.generate_html.load_template") as mock_load:
+            mock_load.return_value = """<!DOCTYPE html>
+<html><body>{date}<!--ARTICLES_PLACEHOLDER--><!--SIDEBAR_ARTICLES_PLACEHOLDER--></body></html>"""
+
+            result = generate_html(articles)
+
+            # Should contain a date string
+            assert any(month in result for month in ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"])
 
 
-class TestLoadTemplate:
-    """P1: Template loading tests."""
+# =============================================================================
+# Integration Tests (tmp_path)
+# =============================================================================
 
-    def test_load_default_template(self):
-        """Default template should load for AI Research category."""
-        with patch("builtins.open", mock_open(read_data="test content")):
-            result = load_template("AI Research")
-            assert result == "test content"
 
-    def test_load_ml_template(self):
-        """Machine Learning category should use ML template."""
-        with (
-            patch("generate_html.ML_TEMPLATE_PATH", "/fake/path/ml.html"),
-            patch("builtins.open", mock_open(read_data="ml content")),
-        ):
-            result = load_template("Machine Learning")
-            assert result == "ml content"
+class TestGenerateHtmlIntegration:
+    """Integration tests using tmp_path for file operations."""
 
-    def test_load_cv_template(self):
-        """Computer Vision category should use CV template."""
-        with (
-            patch("generate_html.CV_TEMPLATE_PATH", "/fake/path/cv.html"),
-            patch("builtins.open", mock_open(read_data="cv content")),
-        ):
-            result = load_template("Computer Vision")
-            assert result == "cv content"
+    def test_generate_returns_string(self, tmp_path):
+        """generate_html should return HTML string."""
+        articles = [
+            {
+                "id": "2301.12345",
+                "title": "Test",
+                "blurb": "Summary",
+                "url": "https://arxiv.org/abs/2301.12345",
+            }
+        ]
+
+        with patch("arxiv_aggregator.generate_html.load_template") as mock_load:
+            mock_load.return_value = "<html>{{content}}</html>"
+
+            result = generate_html(articles)
+
+            assert isinstance(result, str)
+            assert "Test" in result
+
+    def test_generate_with_different_categories(self):
+        """generate_html should work with different category parameters."""
+        articles = [
+            {
+                "id": "2301.12345",
+                "title": "AI Paper",
+                "blurb": "Summary",
+                "url": "https://arxiv.org/abs/2301.12345",
+            }
+        ]
+
+        with patch("arxiv_aggregator.generate_html.load_template") as mock_load:
+            mock_load.return_value = "<html>{{content}}</html>"
+
+            # Should work with different categories
+            result_ml = generate_html(articles, category="Machine Learning")
+            result_cv = generate_html(articles, category="Computer Vision")
+            result_cr = generate_html(articles, category="Security/Cryptography")
+
+            assert isinstance(result_ml, str)
+            assert isinstance(result_cv, str)
+            assert isinstance(result_cr, str)

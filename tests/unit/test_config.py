@@ -17,7 +17,7 @@ class TestConfigTypoFix:
     def test_arxiv_cr_url_has_sortby_parameter(self):
         """ARXIV_CR_URL must use 'sortBy' parameter, not 'pysortBy'."""
         # Import fresh to avoid cached imports
-        import config
+        import arxiv_aggregator.config as config
 
         importlib.reload(config)
 
@@ -25,7 +25,7 @@ class TestConfigTypoFix:
 
     def test_arxiv_cr_url_has_no_typo(self):
         """ARXIV_CR_URL must NOT contain the 'pysortBy' typo."""
-        import config
+        import arxiv_aggregator.config as config
 
         importlib.reload(config)
 
@@ -39,7 +39,7 @@ class TestConfigURLProtocol:
 
     def test_arxiv_api_url_uses_https(self):
         """ARXIV_API_URL should use HTTPS."""
-        import config
+        import arxiv_aggregator.config as config
 
         importlib.reload(config)
 
@@ -49,7 +49,7 @@ class TestConfigURLProtocol:
 
     def test_arxiv_ml_url_uses_https(self):
         """ARXIV_ML_URL should use HTTPS."""
-        import config
+        import arxiv_aggregator.config as config
 
         importlib.reload(config)
 
@@ -57,7 +57,7 @@ class TestConfigURLProtocol:
 
     def test_arxiv_cv_url_uses_https(self):
         """ARXIV_CV_URL should use HTTPS."""
-        import config
+        import arxiv_aggregator.config as config
 
         importlib.reload(config)
 
@@ -65,7 +65,7 @@ class TestConfigURLProtocol:
 
     def test_arxiv_ro_url_uses_https(self):
         """ARXIV_RO_URL should use HTTPS."""
-        import config
+        import arxiv_aggregator.config as config
 
         importlib.reload(config)
 
@@ -73,7 +73,7 @@ class TestConfigURLProtocol:
 
     def test_arxiv_cr_url_uses_https(self):
         """ARXIV_CR_URL should use HTTPS."""
-        import config
+        import arxiv_aggregator.config as config
 
         importlib.reload(config)
 
@@ -97,7 +97,7 @@ class TestConfigDefaults:
         os.environ["UNSPLASH_APPLICATION_ID"] = "app"
 
         try:
-            import config
+            import arxiv_aggregator.config as config
 
             importlib.reload(config)
 
@@ -120,7 +120,7 @@ class TestConfigDefaults:
         os.environ["UNSPLASH_APPLICATION_ID"] = "app"
 
         try:
-            import config
+            import arxiv_aggregator.config as config
 
             importlib.reload(config)
 
@@ -142,7 +142,7 @@ class TestConfigDefaults:
         os.environ["UNSPLASH_APPLICATION_ID"] = "app"
 
         try:
-            import config
+            import arxiv_aggregator.config as config
 
             importlib.reload(config)
 
@@ -168,7 +168,7 @@ class TestConfigURLs:
         os.environ["UNSPLASH_APPLICATION_ID"] = "app"
 
         try:
-            import config
+            import arxiv_aggregator.config as config
 
             importlib.reload(config)
 
@@ -192,7 +192,7 @@ class TestConfigURLs:
         os.environ["UNSPLASH_APPLICATION_ID"] = "app"
 
         try:
-            import config
+            import arxiv_aggregator.config as config
 
             importlib.reload(config)
 
@@ -213,7 +213,7 @@ class TestConfigURLs:
         os.environ["UNSPLASH_APPLICATION_ID"] = "app"
 
         try:
-            import config
+            import arxiv_aggregator.config as config
 
             importlib.reload(config)
 
@@ -234,7 +234,7 @@ class TestConfigURLs:
         os.environ["UNSPLASH_APPLICATION_ID"] = "app"
 
         try:
-            import config
+            import arxiv_aggregator.config as config
 
             importlib.reload(config)
 
@@ -255,7 +255,7 @@ class TestConfigURLs:
         os.environ["UNSPLASH_APPLICATION_ID"] = "app"
 
         try:
-            import config
+            import arxiv_aggregator.config as config
 
             importlib.reload(config)
 
@@ -280,7 +280,7 @@ class TestConfigUnsplash:
         os.environ["UNSPLASH_APPLICATION_ID"] = "app"
 
         try:
-            import config
+            import arxiv_aggregator.config as config
 
             importlib.reload(config)
 

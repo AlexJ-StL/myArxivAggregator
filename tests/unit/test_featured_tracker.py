@@ -6,7 +6,7 @@ P0: State integrity and JSON persistence tests.
 
 from unittest.mock import mock_open, patch
 
-from featured_tracker import (
+from arxiv_aggregator.featured_tracker import (
     add_featured_id,
     clear_featured_ids,
     load_featured_ids,

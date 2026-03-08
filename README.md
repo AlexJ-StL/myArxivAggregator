@@ -1,254 +1,301 @@
 # arXiv Research Aggregator
 
-A Python-based web application that automatically fetches, processes, and publishes the latest research papers from arXiv across multiple computer science domains including AI, Machine Learning, Computer Vision, Robotics, and Cryptography/Security.
+> **Brevity Note:** This documentation follows a "Signal-over-Noise" protocol. Technical accuracy and security are prioritized over marketing fluff.
 
-## Features
+---
 
-- **Multi-Domain Coverage**: Aggregates papers from CS.AI, CS.LG, CS.CV, CS.RO, and CS.CR categories
-- **AI-Powered Content Enhancement**: Uses Ollama LLM to rewrite titles and generate engaging summaries
-- **Visual Content Generation**: Automatically generates relevant images using Unsplash API
-- **Featured Article Selection**: Intelligent scoring system to highlight the most interesting papers
-- **Automated Publishing**: Direct FTP upload to web server for seamless deployment
-- **Responsive Web Interface**: Clean, modern HTML templates for optimal viewing experience
-- **Duplicate Prevention**: Tracks processed papers to avoid republishing
+## 1. Executive Summary
 
-## Architecture
+A Python-based web application that automatically fetches, processes, and publishes research papers from arXiv across multiple computer science domains (AI, Machine Learning, Computer Vision, Robotics, Cryptography/Security, and HCI).
+
+- **Core Value:** Automates discovery and publishing of CS research papers with AI-enhanced content and contextual imagery.
+- **Primary Stakeholders:** Researchers, developers, and tech enthusiasts who want curated research paper feeds.
+
+**Version:** 0.1.0 | **License:** MIT | **Python:** 3.11+
+
+---
+
+## 2. Architecture
 
 ```
 myArxivAggregator/
-├── aggregator.py           # Main AI aggregator
-├── aggregator_ml.py        # Machine Learning aggregator
-├── aggregator_cv.py        # Computer Vision aggregator
-├── aggregator_ro.py        # Robotics aggregator
-├── aggregator_cr.py        # Cryptography/Security aggregator
-├── aggregator_hc.py        # Human-Computer Interaction aggregator
-├── config.py               # Configuration management
-├── content_utils.py        # Content processing utilities
-├── featured_tracker.py     # Featured article selection logic
-├── generate_html.py        # HTML generation utilities
-├── run_all_aggregators.py  # Orchestration script
-├── templates/              # HTML templates
-│   ├── base_template.html
-│   ├── ml_template.html
-│   ├── cv_template.html
-│   ├── ro_template.html
-│   ├── cr_template.html
-│   └── hc_template.html
-└── output/                 # Generated HTML files and images
+├── src/arxiv_aggregator/          # Core package
+│   ├── __init__.py
+│   ├── config.py                  # Configuration & credential validation
+│   ├── content_utils.py           # AI content generation & XSS sanitization
+│   ├── core.py                    # BaseAggregator class (DRY pattern)
+│   ├── featured_tracker.py        # Featured article selection logic
+│   ├── generate_html.py           # HTML generation utilities
+│   └── templates/                  # HTML templates
+│       ├── base_template.html
+│       ├── ml_template.html
+│       ├── cv_template.html
+│       ├── ro_template.html
+│       ├── cr_template.html
+│       └── hc_template.html
+├── aggregator.py                   # AI Research (cs.AI) - entry point
+├── aggregator_ml.py                # Machine Learning (cs.LG)
+├── aggregator_cv.py                # Computer Vision (cs.CV)
+├── aggregator_ro.py                # Robotics (cs.RO)
+├── aggregator_cr.py                # Cryptography/Security (cs.CR)
+├── aggregator_hc.py                # Human-Computer Interaction (cs.HC)
+├── run_all_aggregators.py          # Batch orchestration script
+├── tests/                          # Comprehensive test suite
+│   ├── conftest.py                # Pytest fixtures & mocks
+│   ├── unit/                      # Unit tests
+│   ├── integration/               # Integration tests
+│   └── security/                  # Security tests (input validation)
+├── typings/                        # Type stubs for external packages
+├── pyproject.toml                  # Project metadata & dependencies
+├── requirements.txt               # Pip-compatible dependencies
+├── .env.example                    # Environment template
+└── LICENSE                         # MIT License
 ```
 
-## Prerequisites
+### Design Decisions
 
-- **Python 3.13**
-- **Ollama** (for AI content generation)
-  - Install from [ollama.ai](https://ollama.ai)
-  - Pull required models: `ollama pull llama3.1:8b` and `ollama pull llava:latest`
-- **FTP Server Access** (for publishing)
-- **Unsplash API Account** (for image generation)
+- **DRY Pattern:** [`BaseAggregator`](src/arxiv_aggregator/core.py:23) in [`core.py`](src/arxiv_aggregator/core.py) eliminates code duplication across category-specific aggregators.
+- **Runtime Credential Validation:** [`validate_credentials()`](src/arxiv_aggregator/config.py:43) defers credential checks until needed, avoiding import-time failures.
+- **XSS Defense-in-Depth:** Content sanitization in [`content_utils.py`](src/arxiv_aggregator/content_utils.py:34) combined with [`html.escape()`](src/arxiv_aggregator/generate_html.py) in output generation.
 
-## Installation
+---
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/AlexJ-StL/myArxivAggregator.git
-   cd myArxivAggregator
-   ```
+## 3. Security & Ethics
 
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### API/Secret Handling
 
-3. **Set up environment variables**:
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit `.env` with your actual credentials:
-   ```env
-   # FTP Configuration
-   FTP_HOST=your-ftp-host.com
-   FTP_USER=your-ftp-username
-   FTP_PASS=your-ftp-password
-   FTP_REMOTE_DIR=.
+- **Environment Variables:** All secrets loaded from `.env` at runtime. Never commit actual credentials.
+- **Template:** See [`.env.example`](.env.example) for required variables.
 
-   # Unsplash API (get from https://unsplash.com/developers)
-   UNSPLASH_ACCESS_KEY=your-access-key
-   UNSPLASH_SECRET_KEY=your-secret-key
-   UNSPLASH_APPLICATION_ID=your-app-id
+### Attack Vector Mitigation
 
-   # Ollama Configuration (optional, defaults provided)
-   OLLAMA_MODEL=llama3.1:8b
-   OLLAMA_VISION_MODEL=llava:latest
-   ```
+| Vector | Mitigation |
+|--------|------------|
+| **XSS** | Content sanitization in [`clean_generated_text()`](src/arxiv_aggregator/content_utils.py:34) + HTML escaping in [`generate_html.py`](src/arxiv_aggregator/generate_html.py) |
+| **Credential Exposure** | Runtime validation; credentials not stored in code |
+| **API Rate Limiting** | Handled via try/except with graceful degradation |
 
-4. **Start Ollama service**:
-   ```bash
-   ollama serve
-   ```
+### Ethical Bound
 
-## Usage
+This tool is designed for educational and research purposes. Users must:
+- Respect arXiv's [terms of service](https://arxiv.org/help/policies) and API rate limits
+- Comply with Unsplash [API guidelines](https://unsplash.com/documentation# attribution-requirements)
+- Not use this tool to generate harmful content
 
-### Run All Aggregators
-Process all research domains and publish to web:
+---
+
+## 4. Prerequisites
+
+| Requirement | Version | Notes |
+|-------------|---------|-------|
+| Python | 3.11+ | See [`pyproject.toml`](pyproject.toml:14) |
+| Ollama | Latest | Local LLM for content generation. Install from [ollama.ai](https://ollama.ai) |
+| FTP Server | — | For publishing generated HTML |
+| Unsplash API | — | For contextual imagery |
+
+### Ollama Setup
+
 ```bash
-python run_all_aggregators.py
+# Install Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Pull required model
+ollama pull llama3.1:8b
 ```
 
-### Run Individual Aggregators
-Process specific research domains:
+---
+
+## 5. Installation
+
 ```bash
-python aggregator.py      # AI papers
-python aggregator_ml.py   # Machine Learning papers
-python aggregator_cv.py   # Computer Vision papers
-python aggregator_ro.py   # Robotics papers
-python aggregator_cr.py   # Cryptography/Security papers
+# Clone repository
+git clone https://github.com/AlexJ-StL/myArxivAggregator.git
+cd myArxivAggregator
+
+# Create virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # Linux/macOS
+# or: venv\Scripts\activate  # Windows
+
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-### Local Development
-Generate HTML files without FTP upload:
-```bash
-python aggregator.py --no-upload
-```
+---
 
-## Configuration
+## 6. Configuration
 
 ### Environment Variables
+
+Copy [`.env.example`](.env.example) to `.env` and configure:
+
+```bash
+cp .env.example .env
+```
 
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `FTP_HOST` | FTP server hostname | Yes |
 | `FTP_USER` | FTP username | Yes |
 | `FTP_PASS` | FTP password | Yes |
-| `FTP_REMOTE_DIR` | Remote directory path | No (default: ".") |
+| `FTP_REMOTE_DIR` | Remote directory | No (default: `.`) |
 | `UNSPLASH_ACCESS_KEY` | Unsplash API access key | Yes |
 | `UNSPLASH_SECRET_KEY` | Unsplash API secret key | Yes |
 | `UNSPLASH_APPLICATION_ID` | Unsplash application ID | Yes |
-| `OLLAMA_MODEL` | Ollama text model | No (default: "llama3.1:8b") |
-| `OLLAMA_VISION_MODEL` | Ollama vision model | No (default: "llava:latest") |
+| `OLLAMA_MODEL` | Ollama text model | No (default: `llama3.1:8b`) |
+| `OLLAMA_VISION_MODEL` | Ollama vision model | No (default: `llava:latest`) |
+| `OLLAMA_API_URL` | Ollama API endpoint | No (default: `http://localhost:11434/api/generate`) |
 
-### Customization
-
-- **Paper Limits**: Modify `MAX_ARTICLES` in aggregator files
-- **Categories**: Update arXiv API URLs in `config.py`
-- **Templates**: Customize HTML templates in `templates/` directory
-- **Scoring Logic**: Adjust featured article selection in `featured_tracker.py`
-
-## API Integration
-
-### arXiv API
-- Fetches recent papers using arXiv's Atom feed API
-- Supports category-specific queries
-- Handles pagination and rate limiting
-
-### Ollama Integration
-- **Text Generation**: Rewrites titles and creates engaging summaries
-- **Content Scoring**: Evaluates paper relevance and interest level
-- **Local Processing**: All AI operations run locally for privacy
-
-### Unsplash API
-- Generates contextually relevant images for each paper
-- Implements search keyword optimization
-- Handles API rate limits and fallbacks
-
-## Output Structure
-
-Generated files are organized as follows:
-```
-output/
-├── index.html          # Main landing page
-├── ml.html            # Machine Learning papers
-├── cv.html            # Computer Vision papers
-├── ro.html            # Robotics papers
-├── cr.html            # Cryptography papers
-└── images/            # Generated article images
-    ├── article_[hash].jpg
-    └── ...
-```
-
-## Automation
-
-### Scheduled Execution
-Set up automated runs using cron (Linux/macOS) or Task Scheduler (Windows):
+### Start Ollama
 
 ```bash
-# Run every 6 hours
-0 */6 * * * cd /path/to/arxiv_aggregator && python run_all_aggregators.py
+# In a separate terminal
+ollama serve
 ```
-
-### CI/CD Integration
-The project can be integrated with GitHub Actions or similar CI/CD platforms for automated deployment.
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Ollama Connection Error**:
-   - Ensure Ollama is running: `ollama serve`
-   - Check if models are installed: `ollama list`
-
-2. **FTP Upload Failures**:
-   - Verify FTP credentials in `.env`
-   - Check network connectivity and firewall settings
-
-3. **Unsplash API Limits**:
-   - Monitor API usage in Unsplash dashboard
-   - Implement caching for frequently used images
-
-4. **Missing Dependencies**:
-   ```bash
-   pip install --upgrade -r requirements.txt
-   ```
-
-### Debug Mode
-Enable verbose logging by setting environment variable:
-```bash
-export DEBUG=1
-python aggregator.py
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Make your changes and add tests
-4. Commit your changes: `git commit -am 'Add feature'`
-5. Push to the branch: `git push origin feature-name`
-6. Submit a pull request
-
-### Development Guidelines
-
-- Follow PEP 8 style guidelines
-- Add docstrings to all functions
-- Include error handling for external API calls
-- Test with multiple paper categories
-- Update documentation for new features
-
-## Security
-
-- **Environment Variables**: Never commit `.env` file to version control
-- **API Keys**: Rotate keys regularly and use least-privilege access
-- **FTP Credentials**: Use secure FTP (SFTP) when possible
-- **Input Validation**: All external data is sanitized before processing
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- [arXiv](https://arxiv.org/) for providing open access to research papers
-- [Ollama](https://ollama.ai/) for local AI model hosting
-- [Unsplash](https://unsplash.com/) for high-quality stock photography
-- The open-source community for various Python libraries used
-
-## Support
-
-For questions, issues, or contributions:
-- Open an issue on GitHub
-- Check existing documentation
-- Review troubleshooting section
 
 ---
 
-**Note**: This tool is designed for educational and research purposes. Please respect arXiv's terms of service and API rate limits.
+## 7. Usage
+
+### Run All Aggregators
+
+```bash
+python run_all_aggregators.py
+```
+
+This will:
+1. Clear old content from FTP server
+2. Process all 6 research categories
+3. Upload generated HTML and images
+
+### Run Individual Aggregator
+
+```bash
+python aggregator.py      # AI Research (cs.AI)
+python aggregator_ml.py   # Machine Learning (cs.LG)
+python aggregator_cv.py   # Computer Vision (cs.CV)
+python aggregator_ro.py   # Robotics (cs.RO)
+python aggregator_cr.py   # Cryptography/Security (cs.CR)
+python aggregator_hc.py   # Human-Computer Interaction (cs.HC)
+```
+
+---
+
+## 8. Testing
+
+### Run All Tests
+
+```bash
+pytest
+```
+
+### Run Specific Test Suites
+
+```bash
+pytest tests/unit/           # Unit tests
+pytest tests/integration/    # Integration tests
+pytest tests/security/      # Security tests
+```
+
+### Test Coverage
+
+The project includes:
+- **Unit tests:** Individual component testing
+- **Integration tests:** Full aggregator workflow verification
+- **Security tests:** Input validation and XSS sanitization
+- **Fixtures:** Network mocking for deterministic testing (see [`conftest.py`](tests/conftest.py:1))
+
+---
+
+## 9. Output Structure
+
+Generated files are published to the configured FTP server:
+
+```
+output/
+├── index.html    # AI Research (main entry point)
+├── ml.html       # Machine Learning
+├── cv.html       # Computer Vision
+├── ro.html       # Robotics
+├── cr.html       # Cryptography/Security
+├── hc.html       # Human-Computer Interaction
+└── images/       # Generated article images
+    └── article_*.jpg
+```
+
+---
+
+## 10. Automation
+
+### Scheduled Execution (Linux/macOS)
+
+```bash
+# Run every 6 hours
+0 */6 * * * cd /path/to/myArxivAggregator && python run_all_aggregators.py
+```
+
+### Windows Task Scheduler
+
+```cmd
+schtasks /create /tn "arXiv Aggregator" /tr "python run_all_aggregators.py" /sc hourly /mo 6
+```
+
+---
+
+## 11. Troubleshooting
+
+### Ollama Connection Error
+
+```bash
+# Ensure Ollama is running
+ollama serve
+
+# Verify models are installed
+ollama list
+```
+
+### FTP Upload Failures
+
+- Verify credentials in `.env`
+- Check network connectivity
+- Ensure FTP server allows write access
+
+### Unsplash API Errors
+
+- Monitor usage in [Unsplash dashboard](https://unsplash.com/developers)
+- Check API rate limits
+
+---
+
+## 12. Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature-name`
+3. Make changes and add tests
+4. Run the test suite: `pytest`
+5. Commit and push: `git commit -am 'Add feature'` && `git push origin feature-name`
+6. Open a pull request
+
+### Development Dependencies
+
+```bash
+pip install -e ".[dev]"
+```
+
+---
+
+## 13. License
+
+MIT License. See [LICENSE](LICENSE) file for details.
+
+---
+
+## 14. Acknowledgments
+
+- [arXiv](https://arxiv.org/) — Open access to research papers
+- [Ollama](https://ollama.ai/) — Local AI model hosting
+- [Unsplash](https://unsplash.com/) — Stock photography
+
+---
+
+Generated by Kilo Code Documentation Specialist.

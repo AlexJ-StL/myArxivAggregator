@@ -14,15 +14,16 @@ dependencies = [
     "types-requests>=2.32.4.20260107",
     "uvicorn>=0.41.0",
     "pytest>=9.0.2",
-    "pyproject-toml>=0.1.0"
+    "pyproject-toml>=0.1.0",
+    "responses>=0.24.1",
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 readme = "README.md"
 license = { text = "MIT" }
 
 [project.optional-dependencies]
 dev = [
-    "types-requests>=2.31.0.0",
+    "ruff>=0.8.0",
 ]
 
 [tool.pytest.ini_options]
@@ -33,7 +34,7 @@ python_version = "3.13"
 # Tell mypy where to find the feedparser stubs
 mypy_path = "./typings"
 # Enable strict mode for better type checking
-strict = false
+strict = true
 # Ignore missing imports for packages that don't have stubs (some may be handled elsewhere)
 ignore_missing_imports = true
 
@@ -49,7 +50,7 @@ ignore_errors = false
 include = ["typings"]
 extraPaths = ["./typings"]
 # Python version for type checking
-pythonVersion = "3.10"
+pythonVersion = "3.13"
 # Type checking mode
 typeCheckingMode = "standard"
 
@@ -83,11 +84,11 @@ exclude = [
 ]
 
 # Same as Black.
-line-length = 100
+line-length = 120
 indent-width = 4
 
-# Assume Python 3.11
-target-version = "py311"
+# Assume Python 3.13
+target-version = "py313"
 
 [tool.ruff.lint]
 # Enable specific rule categories

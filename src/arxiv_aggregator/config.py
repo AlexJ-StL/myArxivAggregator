@@ -12,6 +12,7 @@ ARXIV_ML_URL = "https://export.arxiv.org/api/query?search_query=cat:cs.LG&sortBy
 ARXIV_CV_URL = "https://export.arxiv.org/api/query?search_query=cat:cs.CV&sortBy=lastUpdatedDate&sortOrder=descending&max_results=8&start=0"
 ARXIV_RO_URL = "https://export.arxiv.org/api/query?search_query=cat:cs.RO&sortBy=lastUpdatedDate&sortOrder=descending&max_results=8&start=0"
 ARXIV_CR_URL = "https://export.arxiv.org/api/query?search_query=cat:cs.CR&sortBy=lastUpdatedDate&sortOrder=descending&max_results=8&start=0"
+ARXIV_HC_URL = "https://export.arxiv.org/api/query?search_query=cat:cs.HC&sortBy=lastUpdatedDate&sortOrder=descending&max_results=8&start=0"
 
 # Local JSON file to track which arXiv IDs have already been processed
 SEEN_IDS_FILE = "seen_arxiv_ids.json"

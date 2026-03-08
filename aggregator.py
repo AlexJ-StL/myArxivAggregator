@@ -1,18 +1,11 @@
 # aggregator.py - Main arXiv aggregator for AI research
 
-import sys
-from pathlib import Path
-
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent / "src"))
-
+from arxiv_aggregator.config import ARXIV_API_URL
 from arxiv_aggregator.core import BaseAggregator
 
 
 class AIAggregator(BaseAggregator):
     """ArXiv aggregator for AI research papers."""
-
-    api_url = "https://export.arxiv.org/api/query?search_query=cat:cs.AI&sortBy=lastUpdatedDate&sortOrder=descending&max_results=8&start=0"
 
     def get_category_name(self) -> str:
         return "AI Research"
@@ -24,7 +17,7 @@ class AIAggregator(BaseAggregator):
         return "index.html"
 
     def get_api_url(self) -> str:
-        return self.api_url
+        return ARXIV_API_URL
 
     def should_filter_seen_ids(self) -> bool:
         """The main AI aggregator filters by seen IDs to avoid reprocessing."""

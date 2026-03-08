@@ -287,7 +287,7 @@ def clean_config():
     # Reload config
     import importlib
 
-    import config
+    from arxiv_aggregator import config
 
     importlib.reload(config)
 
@@ -358,22 +358,22 @@ def sample_articles_with_featured(sample_articles_list):
 @pytest.fixture
 def patch_ollama():
     """Patch Ollama API calls."""
-    return patch("content_utils.call_ollama")
+    return patch("arxiv_aggregator.content_utils.call_ollama")
 
 
 @pytest.fixture
 def patch_featured_tracker_file():
     """Patch featured tracker file path."""
-    return patch("featured_tracker.FEATURED_IDS_FILE")
+    return patch("arxiv_aggregator.featured_tracker.FEATURED_IDS_FILE")
 
 
 @pytest.fixture
 def patch_seen_ids_file():
     """Patch seen IDs file path."""
-    return patch("aggregator.SEEN_IDS_FILE")
+    return patch("arxiv_aggregator.config.SEEN_IDS_FILE")
 
 
 @pytest.fixture
 def patch_template_path():
     """Patch template paths."""
-    return patch("generate_html.TEMPLATE_PATH")
+    return patch("arxiv_aggregator.generate_html.TEMPLATE_PATH")

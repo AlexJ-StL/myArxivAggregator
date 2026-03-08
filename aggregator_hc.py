@@ -1,18 +1,11 @@
 # aggregator_hc.py - Human-Computer Interaction specific aggregator
 
-import sys
-from pathlib import Path
-
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent / "src"))
-
+from arxiv_aggregator.config import ARXIV_HC_URL
 from arxiv_aggregator.core import BaseAggregator
 
 
 class HCAggregator(BaseAggregator):
     """ArXiv aggregator for Human-Computer Interaction papers."""
-
-    api_url = "http://export.arxiv.org/api/query?search_query=cat:cs.HC&start=0&max_results=8&sortBy=submittedDate&sortOrder=descending"
 
     def get_category_name(self) -> str:
         return "Human-Computer Interaction"
@@ -24,7 +17,7 @@ class HCAggregator(BaseAggregator):
         return "hc.html"
 
     def get_api_url(self) -> str:
-        return self.api_url
+        return ARXIV_HC_URL
 
 
 def main():

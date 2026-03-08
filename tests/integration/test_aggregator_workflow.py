@@ -1,5 +1,5 @@
 """
-Integration tests for aggregator.py with MockServer.
+Integration tests for arxiv_aggregator.core BaseAggregator with MockServer.
 
 P1: API resilience tests - 429 rate limits, timeouts, and other failures.
 """
@@ -8,13 +8,27 @@ from unittest.mock import MagicMock, patch
 
 import responses
 
-from aggregator import (
-    fetch_recent_arxiv,
-    generate_article_image,
-    load_seen_ids,
-    save_seen_ids,
-    search_unsplash_photo,
-)
+from arxiv_aggregator.core import BaseAggregator
+
+
+# Concrete implementation for testing
+class TestAggregator(BaseAggregator):
+    """Test implementation of BaseAggregator."""
+
+    api_url = "https://export.arxiv.org/api/query?search_query=cat:cs.AI"
+
+    def get_category_name(self) -> str:
+        return "Test Category"
+
+    def get_domain(self) -> str:
+        return "test domain"
+
+    def get_output_file(self) -> str:
+        return "test.html"
+
+    def get_api_url(self) -> str:
+        return self.api_url
+
 
 # =============================================================================
 # ArXiv API Resilience Tests
@@ -36,12 +50,13 @@ class TestArxivAPIResilience:
         )
 
         # This will attempt real network - need to mock feedparser
-        with patch("aggregator.feedparser.parse") as mock_parse:
+        with patch("arxiv_aggregator.core.feedparser.parse") as mock_parse:
             # Simulate feedparser behavior when network fails
             mock_parse.side_effect = requests.exceptions.ConnectionError("Connection timeout")
 
             # Should handle gracefully by returning empty list
-            result = fetch_recent_arxiv()
+            agg = TestAggregator()
+            result = agg.fetch_recent_arxiv()
             assert result == []
 
     def test_fetch_handles_malformed_entry(self):
@@ -52,10 +67,11 @@ class TestArxivAPIResilience:
         mock_entry.summary = None  # Missing content
         mock_entry.published = "2024-01-01"
 
-        with patch("aggregator.feedparser.parse") as mock_parse:
+        with patch("arxiv_aggregator.core.feedparser.parse") as mock_parse:
             mock_parse.return_value = MagicMock(entries=[mock_entry])
 
-            result = fetch_recent_arxiv()
+            agg = TestAggregator()
+            result = agg.fetch_recent_arxiv()
 
             # Should handle gracefully
             assert len(result) == 1
@@ -79,7 +95,8 @@ class TestUnsplashAPIResilience:
             status=429,
         )
 
-        result = search_unsplash_photo("test query")
+        agg = TestAggregator()
+        result = agg.search_unsplash_photo("test query")
 
         assert result is None
 
@@ -93,7 +110,8 @@ class TestUnsplashAPIResilience:
             status=500,
         )
 
-        result = search_unsplash_photo("test query")
+        agg = TestAggregator()
+        result = agg.search_unsplash_photo("test query")
 
         assert result is None
 
@@ -107,7 +125,8 @@ class TestUnsplashAPIResilience:
             status=401,
         )
 
-        result = search_unsplash_photo("test query")
+        agg = TestAggregator()
+        result = agg.search_unsplash_photo("test query")
 
         assert result is None
 
@@ -122,7 +141,8 @@ class TestUnsplashAPIResilience:
             body=requests.exceptions.Timeout(),
         )
 
-        result = search_unsplash_photo("test query")
+        agg = TestAggregator()
+        result = agg.search_unsplash_photo("test query")
 
         assert result is None
 
@@ -137,7 +157,8 @@ class TestUnsplashAPIResilience:
             body=requests.exceptions.ConnectionError(),
         )
 
-        result = search_unsplash_photo("test query")
+        agg = TestAggregator()
+        result = agg.search_unsplash_photo("test query")
 
         assert result is None
 
@@ -154,11 +175,13 @@ class TestFileSystemIntegration:
         """Test complete save-load cycle."""
         test_file = tmp_path / "seen_ids.json"
 
-        with patch("aggregator.SEEN_IDS_FILE", str(test_file)):
+        with patch("arxiv_aggregator.core.SEEN_IDS_FILE", str(test_file)):
+            agg = TestAggregator()
             test_ids = {"2401.0001", "2401.0002", "2401.0003"}
 
-            save_seen_ids(test_ids)
-            loaded = load_seen_ids()
+            agg.seen_ids = test_ids
+            agg.save_seen_ids()
+            loaded = agg.load_seen_ids()
 
             assert loaded == test_ids
 
@@ -166,13 +189,17 @@ class TestFileSystemIntegration:
         """Should handle concurrent write attempts gracefully."""
         test_file = tmp_path / "seen_ids.json"
 
-        with patch("aggregator.SEEN_IDS_FILE", str(test_file)):
+        with patch("arxiv_aggregator.core.SEEN_IDS_FILE", str(test_file)):
+            agg = TestAggregator()
             # Save multiple times
-            save_seen_ids({"id1"})
-            save_seen_ids({"id2"})
-            save_seen_ids({"id3"})
+            agg.seen_ids = {"id1"}
+            agg.save_seen_ids()
+            agg.seen_ids = {"id2"}
+            agg.save_seen_ids()
+            agg.seen_ids = {"id3"}
+            agg.save_seen_ids()
 
-            loaded = load_seen_ids()
+            loaded = agg.load_seen_ids()
             # Last write wins
             assert "id3" in loaded
 
@@ -180,8 +207,9 @@ class TestFileSystemIntegration:
         """load_seen_ids should not create file, just return empty set."""
         test_file = tmp_path / "nonexistent.json"
 
-        with patch("aggregator.SEEN_IDS_FILE", str(test_file)):
-            result = load_seen_ids()
+        with patch("arxiv_aggregator.core.SEEN_IDS_FILE", str(test_file)):
+            agg = TestAggregator()
+            result = agg.load_seen_ids()
 
             assert result == set()
             # File should NOT be created by load
@@ -199,9 +227,9 @@ class TestWorkflowIntegration:
     def test_generate_image_workflow_success(self, tmp_path):
         """Test successful image generation workflow."""
         with (
-            patch("aggregator.search_unsplash_photo") as mock_search,
-            patch("aggregator.download_unsplash_photo") as mock_download,
-            patch("aggregator.generate_search_keywords") as mock_keywords,
+            patch.object(TestAggregator, "search_unsplash_photo") as mock_search,
+            patch.object(TestAggregator, "download_unsplash_photo") as mock_download,
+            patch("arxiv_aggregator.content_utils.generate_search_keywords") as mock_keywords,
         ):
             mock_keywords.return_value = "neural network"
             mock_search.return_value = {
@@ -215,7 +243,8 @@ class TestWorkflowIntegration:
             }
             mock_download.return_value = True
 
-            result = generate_article_image("Test Title", "Test Summary")
+            agg = TestAggregator()
+            result = agg.generate_article_image("Test Title", "Test Summary")
 
             assert result is not None
             assert "filename" in result
@@ -226,13 +255,14 @@ class TestWorkflowIntegration:
     def test_generate_image_workflow_no_photo(self):
         """Test image generation when no photo found."""
         with (
-            patch("aggregator.search_unsplash_photo") as mock_search,
-            patch("aggregator.generate_search_keywords") as mock_keywords,
+            patch.object(TestAggregator, "search_unsplash_photo") as mock_search,
+            patch("arxiv_aggregator.content_utils.generate_search_keywords") as mock_keywords,
         ):
             mock_keywords.return_value = "nonexistent"
             mock_search.return_value = None
 
-            result = generate_article_image("Title", "Summary")
+            agg = TestAggregator()
+            result = agg.generate_article_image("Title", "Summary")
 
             assert result is None
 
@@ -248,9 +278,9 @@ class TestErrorRecovery:
     def test_continues_on_image_download_failure(self):
         """Should continue processing if image download fails."""
         with (
-            patch("aggregator.search_unsplash_photo") as mock_search,
-            patch("aggregator.download_unsplash_photo") as mock_download,
-            patch("aggregator.generate_search_keywords") as mock_keywords,
+            patch.object(TestAggregator, "search_unsplash_photo") as mock_search,
+            patch.object(TestAggregator, "download_unsplash_photo") as mock_download,
+            patch("arxiv_aggregator.content_utils.generate_search_keywords") as mock_keywords,
         ):
             mock_keywords.return_value = "test"
             mock_search.return_value = {
@@ -264,7 +294,8 @@ class TestErrorRecovery:
             }
             mock_download.return_value = False  # Download fails
 
-            result = generate_article_image("Title", "Summary")
+            agg = TestAggregator()
+            result = agg.generate_article_image("Title", "Summary")
 
             # Should return None when download fails
             assert result is None
@@ -274,15 +305,16 @@ class TestErrorRecovery:
         unicode_title = "日本語のタイトル 🎉"
 
         with (
-            patch("aggregator.search_unsplash_photo") as mock_search,
-            patch("aggregator.download_unsplash_photo") as mock_download,
-            patch("aggregator.generate_search_keywords") as mock_keywords,
+            patch.object(TestAggregator, "search_unsplash_photo") as mock_search,
+            patch.object(TestAggregator, "download_unsplash_photo") as mock_download,
+            patch("arxiv_aggregator.content_utils.generate_search_keywords") as mock_keywords,
         ):
             mock_keywords.return_value = "test"
             mock_search.return_value = None
             mock_download.return_value = False
 
-            result = generate_article_image(unicode_title, "Summary")
+            agg = TestAggregator()
+            result = agg.generate_article_image(unicode_title, "Summary")
 
             # Should not crash, should return None
             assert result is None

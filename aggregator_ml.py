@@ -1,18 +1,11 @@
 # aggregator_ml.py - Machine Learning specific aggregator
 
-import sys
-from pathlib import Path
-
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent / "src"))
-
+from arxiv_aggregator.config import ARXIV_ML_URL
 from arxiv_aggregator.core import BaseAggregator
 
 
 class MLAggregator(BaseAggregator):
     """ArXiv aggregator for Machine Learning papers."""
-
-    api_url = "http://export.arxiv.org/api/query?search_query=cat:cs.LG&sortBy=lastUpdatedDate&sortOrder=descending&max_results=8&start=0"
 
     def get_category_name(self) -> str:
         return "Machine Learning"
@@ -24,7 +17,7 @@ class MLAggregator(BaseAggregator):
         return "ml.html"
 
     def get_api_url(self) -> str:
-        return self.api_url
+        return ARXIV_ML_URL
 
 
 def main():

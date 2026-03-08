@@ -1,14 +1,18 @@
 import html
-import os
 from datetime import datetime
+from pathlib import Path
+
+# Get the package directory for template paths
+PACKAGE_DIR = Path(__file__).parent
+TEMPLATE_DIR = PACKAGE_DIR / "templates"
 
 # Path to base template (HTML boilerplate with CSS placeholders)
-TEMPLATE_PATH = os.path.join("templates", "base_template.html")
-ML_TEMPLATE_PATH = os.path.join("templates", "ml_template.html")
-CV_TEMPLATE_PATH = os.path.join("templates", "cv_template.html")
-CR_TEMPLATE_PATH = os.path.join("templates", "cr_template.html")
-RO_TEMPLATE_PATH = os.path.join("templates", "ro_template.html")
-HC_TEMPLATE_PATH = os.path.join("templates", "hc_template.html")
+TEMPLATE_PATH = TEMPLATE_DIR / "base_template.html"
+ML_TEMPLATE_PATH = TEMPLATE_DIR / "ml_template.html"
+CV_TEMPLATE_PATH = TEMPLATE_DIR / "cv_template.html"
+CR_TEMPLATE_PATH = TEMPLATE_DIR / "cr_template.html"
+RO_TEMPLATE_PATH = TEMPLATE_DIR / "ro_template.html"
+HC_TEMPLATE_PATH = TEMPLATE_DIR / "hc_template.html"
 
 # Unsplash URL with UTM parameters (constant)
 UNSPLASH_UTM_URL = "https://unsplash.com/?utm_source=arxiv_aggregator&utm_medium=referral"
@@ -40,6 +44,10 @@ def clean_headline(title):
 
 def convert_to_pdf_url(url):
     """Convert arXiv abstract URL to PDF URL by replacing /abs/ with /pdf/"""
+    # P0: Reject dangerous URLs that could execute JavaScript
+    lower_url = url.lower()
+    if lower_url.startswith("javascript:") or lower_url.startswith("data:") or lower_url.startswith("vbscript:"):
+        return "#"
     return url.replace("/abs/", "/pdf/")
 
 
@@ -106,6 +114,8 @@ def generate_html(articles, category="AI Research"):
         </div>"""
 
         pdf_url = convert_to_pdf_url(featured["url"])
+        # P0: Escape URLs to prevent XSS in href attributes
+        escaped_pdf_url = html.escape(pdf_url)
         escaped_title = html.escape(clean_headline(featured["title"]))
         escaped_blurb = html.escape(featured["blurb"])
         html_segments += f"""
@@ -114,7 +124,7 @@ def generate_html(articles, category="AI Research"):
         <h1>{escaped_title}</h1>
         <div class="byline">From arXiv • Latest Research</div>{image_html}
         <p class="summary">{escaped_blurb}</p>
-        <a href="{pdf_url}" target="_blank" class="read-more">Read Full Paper →</a>
+        <a href="{escaped_pdf_url}" target="_blank" class="read-more">Read Full Paper →</a>
       </article>
 """
 
@@ -143,13 +153,15 @@ def generate_html(articles, category="AI Research"):
           </div>"""
 
             pdf_url = convert_to_pdf_url(art["url"])
+            # P0: Escape URLs to prevent XSS in href attributes
+            escaped_pdf_url = html.escape(pdf_url)
             escaped_title = html.escape(clean_headline(art["title"]))
             escaped_blurb = html.escape(art["blurb"])
             html_segments += f"""        <article class="article">
           {image_html}
           <h2>{escaped_title}</h2>
           <p class="summary">{escaped_blurb}</p>
-          <a href="{pdf_url}" target="_blank" class="read-more">Read Paper →</a>
+          <a href="{escaped_pdf_url}" target="_blank" class="read-more">Read Paper →</a>
         </article>
 """
         html_segments += "      </div>\n"
@@ -159,20 +171,22 @@ def generate_html(articles, category="AI Research"):
     if sidebar_articles:
         for art in sidebar_articles:
             pdf_url = convert_to_pdf_url(art["url"])
+            # P0: Escape URLs to prevent XSS in href attributes
+            escaped_pdf_url = html.escape(pdf_url)
             title = html.escape(clean_headline(art["title"]))
             blurb = html.escape(art["blurb"])
             sidebar_html += f"""        <article class="sidebar-article">
-          <h3><a href="{pdf_url}" target="_blank">{title}</a></h3>
+          <h3><a href="{escaped_pdf_url}" target="_blank">{title}</a></h3>
           <p class="summary">{blurb}</p>
-          <a href="{pdf_url}" target="_blank" class="read-more">Read Paper →</a>
+          <a href="{escaped_pdf_url}" target="_blank" class="read-more">Read Paper →</a>
         </article>
 """
 
     # Replace placeholders
-    html = template.replace("<!--ARTICLES_PLACEHOLDER-->", html_segments)
-    html = html.replace("<!--SIDEBAR_ARTICLES_PLACEHOLDER-->", sidebar_html)
+    html_output = template.replace("<!--ARTICLES_PLACEHOLDER-->", html_segments)
+    html_output = html_output.replace("<!--SIDEBAR_ARTICLES_PLACEHOLDER-->", sidebar_html)
 
     # Insert current date
     today = datetime.now().strftime("%B %d, %Y")
-    html = html.replace("{date}", today)
-    return html
+    html_output = html_output.replace("{date}", today)
+    return html_output

@@ -9,7 +9,7 @@ from datetime import datetime
 
 import requests
 
-from config import OLLAMA_API_URL, OLLAMA_MODEL
+from arxiv_aggregator.config import OLLAMA_API_URL, OLLAMA_MODEL
 
 
 def log(message):
@@ -49,15 +49,79 @@ def call_ollama(prompt, max_tokens=200, temperature=0.2):
 
 
 def clean_generated_text(text):
-    """Clean up LLM-generated text to remove narrative elements.
+    """Clean up LLM-generated text to remove narrative elements and XSS.
 
-    Note: HTML escaping is handled in generate_html.py at output time,
-    not here. This function only handles text cleaning/formatting.
+    This function handles both text formatting AND XSS sanitization as a
+    defense-in-depth measure. HTML escaping is also done in generate_html.py
+    at output time, but we sanitize early to prevent any potential issues.
     """
     if not text:
         return "[Generation failed]"
 
+    # P0: XSS Sanitization - remove dangerous HTML/script content
+    # This is defense-in-depth; generate_html.py also uses html.escape()
+    xss_patterns = [
+        (r"<script[^>]*>.*?</script>", ""),  # Remove <script> tags
+        (r"<img[^>]*onerror[^>]*>", ""),  # Remove img onerror
+        (r"<svg[^>]*onload[^>]*>", ""),  # Remove svg onload
+        (r"<iframe[^>]*>.*?</iframe>", ""),  # Remove iframes
+        (r"javascript:", ""),  # Remove javascript: URLs
+        (r"onerror=", ""),  # Remove onerror attributes
+        (r"onload=", ""),  # Remove onload attributes
+        (r"onfocus=", ""),  # Remove onfocus attributes
+        (r"onclick=", ""),  # Remove onclick attributes
+        (r"<object[^>]*data[^>]*>", ""),  # Remove object with data
+        (r"<embed[^>]*>", ""),  # Remove embed tags
+        (r"<link[^>]*>", ""),  # Remove link tags
+        (r"<body[^>]*onload[^>]*>", ""),  # Remove body onload
+        (r"<input[^>]*onfocus[^>]*>", ""),  # Remove input onfocus
+        (r"<marquee[^>]*onstart[^>]*>", ""),  # Remove marquee onstart
+    ]
+
     cleaned = text.strip()
+    
+    # P0: First decode HTML entities to catch encoded attacks, then apply patterns
+    # This ensures &lt;script&gt; becomes <script> and gets removed
+    entity_map = {
+        '&lt;': '<',
+        '&gt;': '>',
+        '&amp;': '&',
+        '&quot;': '"',
+        '&#39;': "'",
+        '&apos;': "'",
+    }
+    for entity, char in entity_map.items():
+        cleaned = cleaned.replace(entity, char)
+    
+    # Also handle numeric entities
+    cleaned = re.sub(r'&#(\d+);', lambda m: chr(int(m.group(1))), cleaned)
+    cleaned = re.sub(r'&#x([0-9a-fA-F]+);', lambda m: chr(int(m.group(1), 16)), cleaned)
+
+    for pattern, replacement in xss_patterns:
+        cleaned = re.sub(pattern, replacement, cleaned, flags=re.IGNORECASE | re.DOTALL)
+
+    # Remove any remaining angle brackets that might be HTML
+    # But be careful not to break legitimate text
+    cleaned = re.sub(r"<[^>]*>", "", cleaned)
+    
+    # P0: If the cleaned text still contains dangerous patterns, fail secure
+    dangerous_patterns = [
+        r'<script',
+        r'javascript:',
+        r'onerror\s*=',
+        r'onload\s*=',
+        r'onclick\s*=',
+        r'onfocus\s*=',
+        r'onmouse',
+        r'onkey',
+    ]
+    for pattern in dangerous_patterns:
+        if re.search(pattern, cleaned, re.IGNORECASE):
+            return "[Generation failed]"
+
+    # Continue with text formatting (use cleaned, not text!)
+    if not cleaned:
+        return "[Generation failed]"
 
     # Remove common narrative prefixes and explanations
     narrative_patterns = [
@@ -86,12 +150,18 @@ def clean_generated_text(text):
     for pattern in narrative_patterns:
         cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
 
+    # P1: Remove numbered list items throughout the text (not just at start)
+    cleaned = re.sub(r"\d+\.\s+", "", cleaned)
+
     # Remove quotes at the beginning and end
     cleaned = cleaned.strip('"').strip("'").strip()
 
     # Remove multiple newlines and clean up
     cleaned = re.sub(r"\n\s*\n", " ", cleaned)
     cleaned = re.sub(r"\s+", " ", cleaned)
+
+    # P1: Remove trailing periods from headlines (they shouldn't end with periods)
+    cleaned = cleaned.rstrip(".")
 
     # Check for explanatory phrases that indicate the LLM added extra content
     explanatory_phrases = ["this headline", "the word", "i removed", "the focus"]
@@ -153,6 +223,10 @@ def rewrite_title(
     text = call_ollama(prompt, max_tokens=1024, temperature=0.2)
     cleaned = clean_generated_text(text)
 
+    # P1: Check if generation failed, fallback to original title
+    if cleaned == "[Generation failed]":
+        return original_title
+
     # Take only the first line if multiple lines
     lines = cleaned.split("\n")
     headline = lines[0].strip().strip('"').strip("'")
@@ -213,5 +287,12 @@ def generate_search_keywords(title, summary, category="technology"):
         keyword = keywords[0] if keywords else category
         # Remove any remaining explanatory text
         keyword = keyword.split("\n")[0].split(".")[0].strip()
+        
+        # P0: Path traversal prevention - remove dangerous path characters
+        keyword = keyword.replace("..", "")
+        keyword = keyword.replace("/", "")
+        keyword = keyword.replace("\\", "")
+        keyword = keyword.replace("file://", "")
+        
         return keyword if keyword else category
     return category

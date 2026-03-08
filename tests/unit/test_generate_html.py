@@ -9,7 +9,7 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-from generate_html import (
+from arxiv_aggregator.generate_html import (
     clean_headline,
     convert_to_pdf_url,
     generate_html,

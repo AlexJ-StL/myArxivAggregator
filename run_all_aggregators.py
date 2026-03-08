@@ -12,8 +12,8 @@ import sys
 import time
 from datetime import datetime
 
-from config import FTP_HOST, FTP_PASS, FTP_REMOTE_DIR, FTP_USER
-from featured_tracker import clear_featured_ids
+from arxiv_aggregator.config import FTP_HOST, FTP_PASS, FTP_REMOTE_DIR, FTP_USER
+from arxiv_aggregator.featured_tracker import clear_featured_ids
 
 
 def log(message):

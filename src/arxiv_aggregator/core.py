@@ -17,7 +17,7 @@ import feedparser
 import requests
 from PIL import Image
 
-from config import (
+from arxiv_aggregator.config import (
     FTP_HOST,
     FTP_PASS,
     FTP_REMOTE_DIR,
@@ -27,9 +27,9 @@ from config import (
     UNSPLASH_API_URL,
     validate_credentials,
 )
-from content_utils import generate_search_keywords, rewrite_blurb, rewrite_title
-from featured_tracker import select_featured_article
-from generate_html import generate_html
+from arxiv_aggregator.content_utils import generate_search_keywords, rewrite_blurb, rewrite_title
+from arxiv_aggregator.featured_tracker import select_featured_article
+from arxiv_aggregator.generate_html import generate_html
 
 
 def log(message: str) -> None:
@@ -120,8 +120,16 @@ class BaseAggregator(ABC):
         for idx, entry in enumerate(feed.entries):
             if idx >= self.MAX_ARTICLES:
                 break
-            title = entry.get("title", "")
-            summary = entry.get("summary", "")
+            # Handle both dict-like and object-like entries (for testing compatibility)
+            if hasattr(entry, 'get'):
+                title = entry.get("title", "")
+                summary = entry.get("summary", "")
+            else:
+                title = getattr(entry, "title", "")
+                summary = getattr(entry, "summary", "")
+            # Ensure we have actual strings, not mock objects
+            title = str(title) if title else ""
+            summary = str(summary) if summary else ""
             articles.append(
                 {
                     "id": entry.id,

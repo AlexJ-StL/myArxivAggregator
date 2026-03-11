@@ -79,7 +79,7 @@ def clean_generated_text(text):
     ]
 
     cleaned = text.strip()
-    
+
     # P0: First decode HTML entities to catch encoded attacks, then apply patterns
     # This ensures &lt;script&gt; becomes <script> and gets removed
     entity_map = {
@@ -92,7 +92,7 @@ def clean_generated_text(text):
     }
     for entity, char in entity_map.items():
         cleaned = cleaned.replace(entity, char)
-    
+
     # Also handle numeric entities
     cleaned = re.sub(r'&#(\d+);', lambda m: chr(int(m.group(1))), cleaned)
     cleaned = re.sub(r'&#x([0-9a-fA-F]+);', lambda m: chr(int(m.group(1), 16)), cleaned)
@@ -103,7 +103,7 @@ def clean_generated_text(text):
     # Remove any remaining angle brackets that might be HTML
     # But be careful not to break legitimate text
     cleaned = re.sub(r"<[^>]*>", "", cleaned)
-    
+
     # P0: If the cleaned text still contains dangerous patterns, fail secure
     dangerous_patterns = [
         r'<script',
@@ -287,12 +287,12 @@ def generate_search_keywords(title, summary, category="technology"):
         keyword = keywords[0] if keywords else category
         # Remove any remaining explanatory text
         keyword = keyword.split("\n")[0].split(".")[0].strip()
-        
+
         # P0: Path traversal prevention - remove dangerous path characters
         keyword = keyword.replace("..", "")
         keyword = keyword.replace("/", "")
         keyword = keyword.replace("\\", "")
         keyword = keyword.replace("file://", "")
-        
+
         return keyword if keyword else category
     return category

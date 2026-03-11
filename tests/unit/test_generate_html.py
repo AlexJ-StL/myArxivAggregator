@@ -4,14 +4,13 @@ Unit tests for generate_html.py module.
 P0: Template loading, rendering, and output tests.
 """
 
-from pathlib import Path
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import mock_open, patch
 
 import pytest
 
 from arxiv_aggregator.generate_html import (
-    convert_to_pdf_url,
     clean_headline,
+    convert_to_pdf_url,
     generate_html,
     load_template,
 )
@@ -39,9 +38,11 @@ class TestLoadTemplate:
 
     def test_file_not_found_raises(self):
         """Missing template should raise FileNotFoundError."""
-        with patch("builtins.open", side_effect=FileNotFoundError("Template not found")):
-            with pytest.raises(FileNotFoundError):
-                load_template("missing.html")
+        with (
+            patch("builtins.open", side_effect=FileNotFoundError("Template not found")),
+            pytest.raises(FileNotFoundError),
+        ):
+            load_template("missing.html")
 
     def test_load_with_base_template(self):
         """Should load base template for rendering."""
@@ -313,7 +314,23 @@ class TestGenerateHtml:
             result = generate_html(articles)
 
             # Should contain a date string
-            assert any(month in result for month in ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"])
+            assert any(
+                month in result
+                for month in [
+                    "January",
+                    "February",
+                    "March",
+                    "April",
+                    "May",
+                    "June",
+                    "July",
+                    "August",
+                    "September",
+                    "October",
+                    "November",
+                    "December",
+                ]
+            )
 
 
 # =============================================================================

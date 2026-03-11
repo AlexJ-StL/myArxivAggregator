@@ -11,7 +11,7 @@ A Python-based web application that automatically fetches, processes, and publis
 - **Core Value:** Automates discovery and publishing of CS research papers with AI-enhanced content and contextual imagery.
 - **Primary Stakeholders:** Researchers, developers, and tech enthusiasts who want curated research paper feeds.
 
-**Version:** 0.1.0 | **License:** MIT | **Python:** 3.11+
+**Version:** 0.1.0 | **License:** MIT | **Python:** 3.13+
 
 ---
 
@@ -46,8 +46,8 @@ myArxivAggregator/
 │   ├── integration/               # Integration tests
 │   └── security/                  # Security tests (input validation)
 ├── typings/                        # Type stubs for external packages
-├── pyproject.toml                  # Project metadata & dependencies
-├── requirements.txt               # Pip-compatible dependencies
+├── pyproject.toml                  # Project metadata & UV workspace config
+├── uv.lock                          # Locked dependency versions (UV)
 ├── .env.example                    # Environment template
 └── LICENSE                         # MIT License
 ```
@@ -88,7 +88,8 @@ This tool is designed for educational and research purposes. Users must:
 
 | Requirement | Version | Notes |
 |-------------|---------|-------|
-| Python | 3.11+ | See [`pyproject.toml`](pyproject.toml:14) |
+| Python | 3.13+ | See [`pyproject.toml`](pyproject.toml) |
+| [UV](https://github.com/astral-sh/uv) | Latest | All-in-one Python package manager (venv + deps + scripts) |
 | Ollama | Latest | Local LLM for content generation. Install from [ollama.ai](https://ollama.ai) |
 | FTP Server | — | For publishing generated HTML |
 | Unsplash API | — | For contextual imagery |
@@ -103,6 +104,37 @@ curl -fsSL https://ollama.ai/install.sh | sh
 ollama pull llama3.1:8b
 ```
 
+### UV Commands
+
+UV provides an all-in-one workflow for this project:
+
+```bash
+# Create venv and install all dependencies
+uv venv
+uv sync
+
+# Add a new dependency
+uv add <package>
+
+# Add a dev dependency
+uv add --dev <package>
+
+# Update dependencies
+uv sync --upgrade
+
+# Run scripts defined in pyproject.toml
+uv run <script-name>
+
+# Run tests with pytest
+uv run pytest
+
+# Run linting with ruff
+uv run ruff check .
+uv run ruff format .
+```
+
+**Note:** The project uses [`uv.lock`](uv.lock) for reproducible builds.
+
 ---
 
 ## 5. Installation
@@ -112,13 +144,17 @@ ollama pull llama3.1:8b
 git clone https://github.com/AlexJ-StL/myArxivAggregator.git
 cd myArxivAggregator
 
-# Create virtual environment (recommended)
-python -m venv venv
-source venv/bin/activate  # Linux/macOS
-# or: venv\Scripts\activate  # Windows
+# Create virtual environment and install dependencies with UV
+uv venv
+uv sync
 
-# Install dependencies
-pip install -r requirements.txt
+# Activate virtual environment (optional - UV auto-activates in session)
+source .venv/bin/activate  # Linux/macOS
+# or
+.venv\Scripts\activate  # Windows
+
+# Install dev dependencies (linting, formatting)
+uv sync --dev
 ```
 
 ---
@@ -160,7 +196,7 @@ ollama serve
 ### Run All Aggregators
 
 ```bash
-python run_all_aggregators.py
+uv run python run_all_aggregators.py
 ```
 
 This will:
@@ -171,12 +207,12 @@ This will:
 ### Run Individual Aggregator
 
 ```bash
-python aggregator.py      # AI Research (cs.AI)
-python aggregator_ml.py   # Machine Learning (cs.LG)
-python aggregator_cv.py   # Computer Vision (cs.CV)
-python aggregator_ro.py   # Robotics (cs.RO)
-python aggregator_cr.py   # Cryptography/Security (cs.CR)
-python aggregator_hc.py   # Human-Computer Interaction (cs.HC)
+uv run python aggregator.py      # AI Research (cs.AI)
+uv run python aggregator_ml.py   # Machine Learning (cs.LG)
+uv run python aggregator_cv.py   # Computer Vision (cs.CV)
+uv run python aggregator_ro.py   # Robotics (cs.RO)
+uv run python aggregator_cr.py   # Cryptography/Security (cs.CR)
+uv run python aggregator_hc.py   # Human-Computer Interaction (cs.HC)
 ```
 
 ---
@@ -186,15 +222,15 @@ python aggregator_hc.py   # Human-Computer Interaction (cs.HC)
 ### Run All Tests
 
 ```bash
-pytest
+uv run pytest
 ```
 
 ### Run Specific Test Suites
 
 ```bash
-pytest tests/unit/           # Unit tests
-pytest tests/integration/    # Integration tests
-pytest tests/security/      # Security tests
+uv run pytest tests/unit/           # Unit tests
+uv run pytest tests/integration/    # Integration tests
+uv run pytest tests/security/      # Security tests
 ```
 
 ### Test Coverage
@@ -231,18 +267,30 @@ output/
 
 ```bash
 # Run every 6 hours
-0 */6 * * * cd /path/to/myArxivAggregator && python run_all_aggregators.py
+0 */6 * * * cd /path/to/myArxivAggregator && uv run python run_all_aggregators.py
 ```
 
 ### Windows Task Scheduler
 
 ```cmd
-schtasks /create /tn "arXiv Aggregator" /tr "python run_all_aggregators.py" /sc hourly /mo 6
+schtasks /create /tn "My ArXiv Aggregator" /tr "uv run python run_all_aggregators.py" /sc hourly /mo 6
 ```
 
 ---
 
 ## 11. Troubleshooting
+
+### UV Issues
+
+```bash
+# Recreate virtual environment
+rm -rf .venv
+uv venv
+uv sync
+
+# Clear UV cache if needed
+uv cache clean
+```
 
 ### Ollama Connection Error
 
@@ -272,14 +320,25 @@ ollama list
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature-name`
 3. Make changes and add tests
-4. Run the test suite: `pytest`
+4. Run the test suite: `uv run pytest`
 5. Commit and push: `git commit -am 'Add feature'` && `git push origin feature-name`
 6. Open a pull request
+
+### Adding Dependencies
+
+```bash
+# Add a new runtime dependency
+uv add <package>
+
+# Add a dev dependency
+uv add --dev <package>
+```
 
 ### Development Dependencies
 
 ```bash
-pip install -e ".[dev]"
+# Install all dev dependencies (includes ruff for linting/formatting)
+uv sync --dev
 ```
 
 ---
